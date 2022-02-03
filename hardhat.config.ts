@@ -15,6 +15,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig } from "hardhat/types";
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
+const mnemonic = 'steak tent kiwi gravity clump crazy industry brother scrap giggle patch movie';
 
 const chainIds = {
     goerli: 5,
@@ -53,6 +54,12 @@ const config: HardhatUserConfig = {
                 url: `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`,
             },
             chainId: chainIds.hardhat,
+        },
+        testnet: {
+            url: "https://data-seed-prebsc-1-s1.binance.org:8545",
+            chainId: 97,
+            gasPrice: 20000000000,
+            accounts: {mnemonic: mnemonic}
         },
         // Uncomment for testing. Commented due to CI issues
         // mainnet: getChainConfig("mainnet"),
@@ -138,13 +145,16 @@ const config: HardhatUserConfig = {
             1: "0x245cc372C84B3645Bf0Ffe6538620B04a217988B",
         },
     },
-    typechain: {
-        outDir: "types",
-        target: "ethers-v5",
-    },
+    // typechain: {
+    //     outDir: "types",
+    //     target: "ethers-v5",
+    // },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
-    },
+    },    
+    // bscscan: {
+    //     apiKey: "2GZFXTGF6YV8747AV8BCURH2ZURZS9WPDS"
+    // },
     mocha: {
         timeout: 1000000,
     },
