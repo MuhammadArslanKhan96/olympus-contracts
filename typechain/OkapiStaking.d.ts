@@ -19,38 +19,46 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface OlympusStakingInterface extends ethers.utils.Interface {
+interface OkapiStakingInterface extends ethers.utils.Interface {
   functions: {
-    "OHM()": FunctionFragment;
+    "OKP()": FunctionFragment;
     "authority()": FunctionFragment;
-    "claim(address,bool)": FunctionFragment;
+    "claim(address)": FunctionFragment;
+    "contractBalance()": FunctionFragment;
+    "deductionFee()": FunctionFragment;
     "distributor()": FunctionFragment;
     "epoch()": FunctionFragment;
     "forfeit()": FunctionFragment;
-    "gOHM()": FunctionFragment;
+    "giveLockBonus(uint256)": FunctionFragment;
     "index()": FunctionFragment;
+    "locker()": FunctionFragment;
     "rebase()": FunctionFragment;
-    "sOHM()": FunctionFragment;
-    "secondsToNextEpoch()": FunctionFragment;
+    "returnLockBonus(uint256)": FunctionFragment;
+    "sOKP()": FunctionFragment;
     "setAuthority(address)": FunctionFragment;
-    "setDistributor(address)": FunctionFragment;
-    "setWarmupLength(uint256)": FunctionFragment;
-    "stake(address,uint256,bool,bool)": FunctionFragment;
-    "supplyInWarmup()": FunctionFragment;
-    "toggleLock()": FunctionFragment;
-    "unstake(address,uint256,bool,bool)": FunctionFragment;
-    "unwrap(address,uint256)": FunctionFragment;
+    "setContract(uint8,address)": FunctionFragment;
+    "setDeductionFeeAndAddress(uint8,uint8,address)": FunctionFragment;
+    "setWarmup(uint256)": FunctionFragment;
+    "stake(uint256,address)": FunctionFragment;
+    "toggleDepositLock()": FunctionFragment;
+    "totalBonus()": FunctionFragment;
+    "unstake(uint256,bool)": FunctionFragment;
     "vestingPeriodInfo(address)": FunctionFragment;
+    "warmupContract()": FunctionFragment;
     "warmupInfo(address)": FunctionFragment;
     "warmupPeriod()": FunctionFragment;
-    "wrap(address,uint256)": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "OHM", values?: undefined): string;
+  encodeFunctionData(functionFragment: "OKP", values?: undefined): string;
   encodeFunctionData(functionFragment: "authority", values?: undefined): string;
+  encodeFunctionData(functionFragment: "claim", values: [string]): string;
   encodeFunctionData(
-    functionFragment: "claim",
-    values: [string, boolean]
+    functionFragment: "contractBalance",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "deductionFee",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "distributor",
@@ -58,99 +66,119 @@ interface OlympusStakingInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(functionFragment: "epoch", values?: undefined): string;
   encodeFunctionData(functionFragment: "forfeit", values?: undefined): string;
-  encodeFunctionData(functionFragment: "gOHM", values?: undefined): string;
-  encodeFunctionData(functionFragment: "index", values?: undefined): string;
-  encodeFunctionData(functionFragment: "rebase", values?: undefined): string;
-  encodeFunctionData(functionFragment: "sOHM", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "secondsToNextEpoch",
-    values?: undefined
+    functionFragment: "giveLockBonus",
+    values: [BigNumberish]
   ): string;
+  encodeFunctionData(functionFragment: "index", values?: undefined): string;
+  encodeFunctionData(functionFragment: "locker", values?: undefined): string;
+  encodeFunctionData(functionFragment: "rebase", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "returnLockBonus",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(functionFragment: "sOKP", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "setAuthority",
     values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "setDistributor",
-    values: [string]
+    functionFragment: "setContract",
+    values: [BigNumberish, string]
   ): string;
   encodeFunctionData(
-    functionFragment: "setWarmupLength",
+    functionFragment: "setDeductionFeeAndAddress",
+    values: [BigNumberish, BigNumberish, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setWarmup",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "stake",
-    values: [string, BigNumberish, boolean, boolean]
+    values: [BigNumberish, string]
   ): string;
   encodeFunctionData(
-    functionFragment: "supplyInWarmup",
+    functionFragment: "toggleDepositLock",
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "toggleLock",
+    functionFragment: "totalBonus",
     values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "unstake",
-    values: [string, BigNumberish, boolean, boolean]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "unwrap",
-    values: [string, BigNumberish]
+    values: [BigNumberish, boolean]
   ): string;
   encodeFunctionData(
     functionFragment: "vestingPeriodInfo",
     values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "warmupContract",
+    values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "warmupInfo", values: [string]): string;
   encodeFunctionData(
     functionFragment: "warmupPeriod",
     values?: undefined
   ): string;
-  encodeFunctionData(
-    functionFragment: "wrap",
-    values: [string, BigNumberish]
-  ): string;
 
-  decodeFunctionResult(functionFragment: "OHM", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "OKP", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "authority", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "claim", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "contractBalance",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "deductionFee",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "distributor",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "epoch", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "forfeit", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "gOHM", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "index", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "rebase", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "sOHM", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "secondsToNextEpoch",
+    functionFragment: "giveLockBonus",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "index", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "locker", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "rebase", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "returnLockBonus",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "sOKP", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setAuthority",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setDistributor",
+    functionFragment: "setContract",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setWarmupLength",
+    functionFragment: "setDeductionFeeAndAddress",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "setWarmup", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "stake", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "supplyInWarmup",
+    functionFragment: "toggleDepositLock",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "toggleLock", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "totalBonus", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "unstake", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "unwrap", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "vestingPeriodInfo",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "warmupContract",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "warmupInfo", data: BytesLike): Result;
@@ -158,30 +186,19 @@ interface OlympusStakingInterface extends ethers.utils.Interface {
     functionFragment: "warmupPeriod",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "wrap", data: BytesLike): Result;
 
   events: {
     "AuthorityUpdated(address)": EventFragment;
-    "DistributorSet(address)": EventFragment;
-    "WarmupSet(uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "AuthorityUpdated"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "DistributorSet"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "WarmupSet"): EventFragment;
 }
 
 export type AuthorityUpdatedEvent = TypedEvent<
   [string] & { authority: string }
 >;
 
-export type DistributorSetEvent = TypedEvent<
-  [string] & { distributor: string }
->;
-
-export type WarmupSetEvent = TypedEvent<[BigNumber] & { warmup: BigNumber }>;
-
-export class OlympusStaking extends BaseContract {
+export class OkapiStaking extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -222,18 +239,29 @@ export class OlympusStaking extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: OlympusStakingInterface;
+  interface: OkapiStakingInterface;
 
   functions: {
-    OHM(overrides?: CallOverrides): Promise<[string]>;
+    OKP(overrides?: CallOverrides): Promise<[string]>;
 
     authority(overrides?: CallOverrides): Promise<[string]>;
 
     claim(
-      _to: string,
-      _rebasing: boolean,
+      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
+
+    contractBalance(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    deductionFee(
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber, string] & {
+        burn: BigNumber;
+        team: BigNumber;
+        teamWallet: string;
+      }
+    >;
 
     distributor(overrides?: CallOverrides): Promise<[string]>;
 
@@ -243,7 +271,7 @@ export class OlympusStaking extends BaseContract {
       [BigNumber, BigNumber, BigNumber, BigNumber] & {
         length: BigNumber;
         number: BigNumber;
-        end: BigNumber;
+        endBlock: BigNumber;
         distribute: BigNumber;
       }
     >;
@@ -252,65 +280,79 @@ export class OlympusStaking extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    gOHM(overrides?: CallOverrides): Promise<[string]>;
+    giveLockBonus(
+      _amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
 
     index(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    locker(overrides?: CallOverrides): Promise<[string]>;
 
     rebase(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    sOHM(overrides?: CallOverrides): Promise<[string]>;
+    returnLockBonus(
+      _amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
 
-    secondsToNextEpoch(overrides?: CallOverrides): Promise<[BigNumber]>;
+    sOKP(overrides?: CallOverrides): Promise<[string]>;
 
     setAuthority(
       _newAuthority: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    setDistributor(
-      _distributor: string,
+    setContract(
+      _contract: BigNumberish,
+      _address: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    setWarmupLength(
+    setDeductionFeeAndAddress(
+      _burn: BigNumberish,
+      _team: BigNumberish,
+      teamWallet: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    setWarmup(
       _warmupPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
     stake(
-      _to: string,
       _amount: BigNumberish,
-      _rebasing: boolean,
-      _claim: boolean,
+      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    supplyInWarmup(overrides?: CallOverrides): Promise<[BigNumber]>;
-
-    toggleLock(
+    toggleDepositLock(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
+
+    totalBonus(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     unstake(
-      _to: string,
       _amount: BigNumberish,
       _trigger: boolean,
-      _rebasing: boolean,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    unwrap(
-      _to: string,
-      _amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
     vestingPeriodInfo(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<[BigNumber, string] & { period: BigNumber; user: string }>;
+    ): Promise<
+      [BigNumber, string, BigNumber] & {
+        period: BigNumber;
+        user: string;
+        amount: BigNumber;
+      }
+    >;
+
+    warmupContract(overrides?: CallOverrides): Promise<[string]>;
 
     warmupInfo(
       arg0: string,
@@ -325,23 +367,28 @@ export class OlympusStaking extends BaseContract {
     >;
 
     warmupPeriod(overrides?: CallOverrides): Promise<[BigNumber]>;
-
-    wrap(
-      _to: string,
-      _amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
   };
 
-  OHM(overrides?: CallOverrides): Promise<string>;
+  OKP(overrides?: CallOverrides): Promise<string>;
 
   authority(overrides?: CallOverrides): Promise<string>;
 
   claim(
-    _to: string,
-    _rebasing: boolean,
+    _recipient: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
+
+  contractBalance(overrides?: CallOverrides): Promise<BigNumber>;
+
+  deductionFee(
+    overrides?: CallOverrides
+  ): Promise<
+    [BigNumber, BigNumber, string] & {
+      burn: BigNumber;
+      team: BigNumber;
+      teamWallet: string;
+    }
+  >;
 
   distributor(overrides?: CallOverrides): Promise<string>;
 
@@ -351,7 +398,7 @@ export class OlympusStaking extends BaseContract {
     [BigNumber, BigNumber, BigNumber, BigNumber] & {
       length: BigNumber;
       number: BigNumber;
-      end: BigNumber;
+      endBlock: BigNumber;
       distribute: BigNumber;
     }
   >;
@@ -360,65 +407,79 @@ export class OlympusStaking extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  gOHM(overrides?: CallOverrides): Promise<string>;
+  giveLockBonus(
+    _amount: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
 
   index(overrides?: CallOverrides): Promise<BigNumber>;
+
+  locker(overrides?: CallOverrides): Promise<string>;
 
   rebase(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  sOHM(overrides?: CallOverrides): Promise<string>;
+  returnLockBonus(
+    _amount: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
 
-  secondsToNextEpoch(overrides?: CallOverrides): Promise<BigNumber>;
+  sOKP(overrides?: CallOverrides): Promise<string>;
 
   setAuthority(
     _newAuthority: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  setDistributor(
-    _distributor: string,
+  setContract(
+    _contract: BigNumberish,
+    _address: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  setWarmupLength(
+  setDeductionFeeAndAddress(
+    _burn: BigNumberish,
+    _team: BigNumberish,
+    teamWallet: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  setWarmup(
     _warmupPeriod: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   stake(
-    _to: string,
     _amount: BigNumberish,
-    _rebasing: boolean,
-    _claim: boolean,
+    _recipient: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  supplyInWarmup(overrides?: CallOverrides): Promise<BigNumber>;
-
-  toggleLock(
+  toggleDepositLock(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
+
+  totalBonus(overrides?: CallOverrides): Promise<BigNumber>;
 
   unstake(
-    _to: string,
     _amount: BigNumberish,
     _trigger: boolean,
-    _rebasing: boolean,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  unwrap(
-    _to: string,
-    _amount: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   vestingPeriodInfo(
     arg0: string,
     overrides?: CallOverrides
-  ): Promise<[BigNumber, string] & { period: BigNumber; user: string }>;
+  ): Promise<
+    [BigNumber, string, BigNumber] & {
+      period: BigNumber;
+      user: string;
+      amount: BigNumber;
+    }
+  >;
+
+  warmupContract(overrides?: CallOverrides): Promise<string>;
 
   warmupInfo(
     arg0: string,
@@ -434,22 +495,24 @@ export class OlympusStaking extends BaseContract {
 
   warmupPeriod(overrides?: CallOverrides): Promise<BigNumber>;
 
-  wrap(
-    _to: string,
-    _amount: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
   callStatic: {
-    OHM(overrides?: CallOverrides): Promise<string>;
+    OKP(overrides?: CallOverrides): Promise<string>;
 
     authority(overrides?: CallOverrides): Promise<string>;
 
-    claim(
-      _to: string,
-      _rebasing: boolean,
+    claim(_recipient: string, overrides?: CallOverrides): Promise<void>;
+
+    contractBalance(overrides?: CallOverrides): Promise<BigNumber>;
+
+    deductionFee(
       overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    ): Promise<
+      [BigNumber, BigNumber, string] & {
+        burn: BigNumber;
+        team: BigNumber;
+        teamWallet: string;
+      }
+    >;
 
     distributor(overrides?: CallOverrides): Promise<string>;
 
@@ -459,68 +522,82 @@ export class OlympusStaking extends BaseContract {
       [BigNumber, BigNumber, BigNumber, BigNumber] & {
         length: BigNumber;
         number: BigNumber;
-        end: BigNumber;
+        endBlock: BigNumber;
         distribute: BigNumber;
       }
     >;
 
-    forfeit(overrides?: CallOverrides): Promise<BigNumber>;
+    forfeit(overrides?: CallOverrides): Promise<void>;
 
-    gOHM(overrides?: CallOverrides): Promise<string>;
+    giveLockBonus(
+      _amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     index(overrides?: CallOverrides): Promise<BigNumber>;
 
-    rebase(overrides?: CallOverrides): Promise<BigNumber>;
+    locker(overrides?: CallOverrides): Promise<string>;
 
-    sOHM(overrides?: CallOverrides): Promise<string>;
+    rebase(overrides?: CallOverrides): Promise<void>;
 
-    secondsToNextEpoch(overrides?: CallOverrides): Promise<BigNumber>;
+    returnLockBonus(
+      _amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    sOKP(overrides?: CallOverrides): Promise<string>;
 
     setAuthority(
       _newAuthority: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setDistributor(
-      _distributor: string,
+    setContract(
+      _contract: BigNumberish,
+      _address: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setWarmupLength(
+    setDeductionFeeAndAddress(
+      _burn: BigNumberish,
+      _team: BigNumberish,
+      teamWallet: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setWarmup(
       _warmupPeriod: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
     stake(
-      _to: string,
       _amount: BigNumberish,
-      _rebasing: boolean,
-      _claim: boolean,
+      _recipient: string,
       overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    ): Promise<boolean>;
 
-    supplyInWarmup(overrides?: CallOverrides): Promise<BigNumber>;
+    toggleDepositLock(overrides?: CallOverrides): Promise<void>;
 
-    toggleLock(overrides?: CallOverrides): Promise<void>;
+    totalBonus(overrides?: CallOverrides): Promise<BigNumber>;
 
     unstake(
-      _to: string,
       _amount: BigNumberish,
       _trigger: boolean,
-      _rebasing: boolean,
       overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    unwrap(
-      _to: string,
-      _amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    ): Promise<void>;
 
     vestingPeriodInfo(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<[BigNumber, string] & { period: BigNumber; user: string }>;
+    ): Promise<
+      [BigNumber, string, BigNumber] & {
+        period: BigNumber;
+        user: string;
+        amount: BigNumber;
+      }
+    >;
+
+    warmupContract(overrides?: CallOverrides): Promise<string>;
 
     warmupInfo(
       arg0: string,
@@ -535,12 +612,6 @@ export class OlympusStaking extends BaseContract {
     >;
 
     warmupPeriod(overrides?: CallOverrides): Promise<BigNumber>;
-
-    wrap(
-      _to: string,
-      _amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
   };
 
   filters: {
@@ -551,34 +622,21 @@ export class OlympusStaking extends BaseContract {
     AuthorityUpdated(
       authority?: string | null
     ): TypedEventFilter<[string], { authority: string }>;
-
-    "DistributorSet(address)"(
-      distributor?: null
-    ): TypedEventFilter<[string], { distributor: string }>;
-
-    DistributorSet(
-      distributor?: null
-    ): TypedEventFilter<[string], { distributor: string }>;
-
-    "WarmupSet(uint256)"(
-      warmup?: null
-    ): TypedEventFilter<[BigNumber], { warmup: BigNumber }>;
-
-    WarmupSet(
-      warmup?: null
-    ): TypedEventFilter<[BigNumber], { warmup: BigNumber }>;
   };
 
   estimateGas: {
-    OHM(overrides?: CallOverrides): Promise<BigNumber>;
+    OKP(overrides?: CallOverrides): Promise<BigNumber>;
 
     authority(overrides?: CallOverrides): Promise<BigNumber>;
 
     claim(
-      _to: string,
-      _rebasing: boolean,
+      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
+
+    contractBalance(overrides?: CallOverrides): Promise<BigNumber>;
+
+    deductionFee(overrides?: CallOverrides): Promise<BigNumber>;
 
     distributor(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -588,58 +646,64 @@ export class OlympusStaking extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    gOHM(overrides?: CallOverrides): Promise<BigNumber>;
+    giveLockBonus(
+      _amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
 
     index(overrides?: CallOverrides): Promise<BigNumber>;
+
+    locker(overrides?: CallOverrides): Promise<BigNumber>;
 
     rebase(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    sOHM(overrides?: CallOverrides): Promise<BigNumber>;
+    returnLockBonus(
+      _amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
 
-    secondsToNextEpoch(overrides?: CallOverrides): Promise<BigNumber>;
+    sOKP(overrides?: CallOverrides): Promise<BigNumber>;
 
     setAuthority(
       _newAuthority: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    setDistributor(
-      _distributor: string,
+    setContract(
+      _contract: BigNumberish,
+      _address: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    setWarmupLength(
+    setDeductionFeeAndAddress(
+      _burn: BigNumberish,
+      _team: BigNumberish,
+      teamWallet: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    setWarmup(
       _warmupPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
     stake(
-      _to: string,
       _amount: BigNumberish,
-      _rebasing: boolean,
-      _claim: boolean,
+      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    supplyInWarmup(overrides?: CallOverrides): Promise<BigNumber>;
-
-    toggleLock(
+    toggleDepositLock(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
+
+    totalBonus(overrides?: CallOverrides): Promise<BigNumber>;
 
     unstake(
-      _to: string,
       _amount: BigNumberish,
       _trigger: boolean,
-      _rebasing: boolean,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
-    unwrap(
-      _to: string,
-      _amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -648,27 +712,26 @@ export class OlympusStaking extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    warmupContract(overrides?: CallOverrides): Promise<BigNumber>;
+
     warmupInfo(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     warmupPeriod(overrides?: CallOverrides): Promise<BigNumber>;
-
-    wrap(
-      _to: string,
-      _amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    OHM(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    OKP(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     authority(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     claim(
-      _to: string,
-      _rebasing: boolean,
+      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
+
+    contractBalance(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    deductionFee(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     distributor(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -678,60 +741,64 @@ export class OlympusStaking extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    gOHM(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    giveLockBonus(
+      _amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
 
     index(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    locker(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     rebase(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    sOHM(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    secondsToNextEpoch(
-      overrides?: CallOverrides
+    returnLockBonus(
+      _amount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
+
+    sOKP(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     setAuthority(
       _newAuthority: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    setDistributor(
-      _distributor: string,
+    setContract(
+      _contract: BigNumberish,
+      _address: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    setWarmupLength(
+    setDeductionFeeAndAddress(
+      _burn: BigNumberish,
+      _team: BigNumberish,
+      teamWallet: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setWarmup(
       _warmupPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
     stake(
-      _to: string,
       _amount: BigNumberish,
-      _rebasing: boolean,
-      _claim: boolean,
+      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    supplyInWarmup(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    toggleLock(
+    toggleDepositLock(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
+
+    totalBonus(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     unstake(
-      _to: string,
       _amount: BigNumberish,
       _trigger: boolean,
-      _rebasing: boolean,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    unwrap(
-      _to: string,
-      _amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -740,17 +807,13 @@ export class OlympusStaking extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    warmupContract(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     warmupInfo(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     warmupPeriod(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    wrap(
-      _to: string,
-      _amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
   };
 }

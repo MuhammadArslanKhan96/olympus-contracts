@@ -16,7 +16,7 @@ async function main() {
     const FRAX = "0x2f7249cb599139e560f0c81c269ab9b04799e453";
     const LUSD = "0x45754df05aa6305114004358ecf8d04ff3b84e26";
 
-    const Authority = await ethers.getContractFactory("OlympusAuthority");
+    const Authority = await ethers.getContractFactory("OkapiAuthority");
     const authority = await Authority.deploy(
         deployer.address,
         deployer.address,
@@ -40,10 +40,10 @@ async function main() {
     const firstEpochNumber = "550";
     const firstBlockNumber = "9505000";
 
-    const OHM = await ethers.getContractFactory("OlympusERC20Token");
+    const OHM = await ethers.getContractFactory("OapiERC20Token");
     const ohm = await OHM.deploy(authority.address);
 
-    const SOHM = await ethers.getContractFactory("sOlympus");
+    const SOHM = await ethers.getContractFactory("sOkapi");
     const sOHM = await SOHM.deploy();
 
     const GOHM = await ethers.getContractFactory("gOHM");
@@ -51,7 +51,7 @@ async function main() {
 
     await migrator.setgOHM(gOHM.address);
 
-    const OlympusTreasury = await ethers.getContractFactory("OlympusTreasury");
+    const OlympusTreasury = await ethers.getContractFactory("OkapiTreasury");
     const olympusTreasury = await OlympusTreasury.deploy(ohm.address, "0", authority.address);
 
     await olympusTreasury.queueTimelock("0", migrator.address, migrator.address);

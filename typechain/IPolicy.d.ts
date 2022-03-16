@@ -19,25 +19,37 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface IStakingInterface extends ethers.utils.Interface {
+interface IPolicyInterface extends ethers.utils.Interface {
   functions: {
-    "claim(address)": FunctionFragment;
-    "stake(uint256,address)": FunctionFragment;
+    "policy()": FunctionFragment;
+    "pullPolicy()": FunctionFragment;
+    "pushPolicy(address)": FunctionFragment;
+    "renouncePolicy()": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "claim", values: [string]): string;
+  encodeFunctionData(functionFragment: "policy", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "stake",
-    values: [BigNumberish, string]
+    functionFragment: "pullPolicy",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "pushPolicy", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "renouncePolicy",
+    values?: undefined
   ): string;
 
-  decodeFunctionResult(functionFragment: "claim", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "stake", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "policy", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "pullPolicy", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "pushPolicy", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "renouncePolicy",
+    data: BytesLike
+  ): Result;
 
   events: {};
 }
 
-export class IStaking extends BaseContract {
+export class IPolicy extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -78,66 +90,82 @@ export class IStaking extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: IStakingInterface;
+  interface: IPolicyInterface;
 
   functions: {
-    claim(
-      _recipient: string,
+    policy(overrides?: CallOverrides): Promise<[string]>;
+
+    pullPolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
+    pushPolicy(
+      newPolicy_: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    renouncePolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
 
-  claim(
-    _recipient: string,
+  policy(overrides?: CallOverrides): Promise<string>;
+
+  pullPolicy(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  stake(
-    _amount: BigNumberish,
-    _recipient: string,
+  pushPolicy(
+    newPolicy_: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  renouncePolicy(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    claim(_recipient: string, overrides?: CallOverrides): Promise<void>;
+    policy(overrides?: CallOverrides): Promise<string>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+    pullPolicy(overrides?: CallOverrides): Promise<void>;
+
+    pushPolicy(newPolicy_: string, overrides?: CallOverrides): Promise<void>;
+
+    renouncePolicy(overrides?: CallOverrides): Promise<void>;
   };
 
   filters: {};
 
   estimateGas: {
-    claim(
-      _recipient: string,
+    policy(overrides?: CallOverrides): Promise<BigNumber>;
+
+    pullPolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
+    pushPolicy(
+      newPolicy_: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    renouncePolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    claim(
-      _recipient: string,
+    policy(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    pullPolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
+    pushPolicy(
+      newPolicy_: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    renouncePolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

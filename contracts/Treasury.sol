@@ -5,7 +5,7 @@ import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IOwnable.sol";
-import "./interfaces/IERC20.sol";
+// import "./interfaces/IERC20.sol";
 import "./interfaces/IERC20Metadata.sol";
 import "./interfaces/IOHM.sol";
 import "./interfaces/IsOHM.sol";
@@ -14,483 +14,465 @@ import "./interfaces/ITreasury.sol";
 
 import "./types/OlympusAccessControlled.sol";
 
-contract OlympusTreasury is OlympusAccessControlled, ITreasury {
-    /* ========== DEPENDENCIES ========== */
+interface IERC20Mintable {
+  function mint( uint256 amount_ ) external;
 
-    using SafeMath for uint256;
+  function mint( address account_, uint256 ammount_ ) external;
+}
+
+contract OKPTreasury is OlympusAccessControlled {
+
+    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
-    /* ========== EVENTS ========== */
+    event Deposit( address indexed token, uint amount, uint value );
+    event Withdrawal( address indexed token, uint amount, uint value );
+    event CreateDebt( address indexed debtor, address indexed token, uint amount, uint value );
+    event RepayDebt( address indexed debtor, address indexed token, uint amount, uint value );
+    event ReservesManaged( address indexed token, uint amount );
+    event ReservesUpdated( uint indexed totalReserves );
+    event ReservesAudited( uint indexed totalReserves );
+    event RewardsMinted( address indexed caller, address indexed recipient, uint amount );
+    event ChangeQueued( MANAGING indexed managing, address queued );
+    event ChangeActivated( MANAGING indexed managing, address activated, bool result );
 
-    event Deposit(address indexed token, uint256 amount, uint256 value);
-    event Withdrawal(address indexed token, uint256 amount, uint256 value);
-    event CreateDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
-    event RepayDebt(address indexed debtor, address indexed token, uint256 amount, uint256 value);
-    event Managed(address indexed token, uint256 amount);
-    event ReservesAudited(uint256 indexed totalReserves);
-    event Minted(address indexed caller, address indexed recipient, uint256 amount);
-    event PermissionQueued(STATUS indexed status, address queued);
-    event Permissioned(address addr, STATUS indexed status, bool result);
+    enum MANAGING { RESERVEDEPOSITOR, RESERVESPENDER, RESERVETOKEN, RESERVEMANAGER, LIQUIDITYDEPOSITOR, LIQUIDITYTOKEN, LIQUIDITYMANAGER, DEBTOR, REWARDMANAGER, SOKP }
 
-    /* ========== DATA STRUCTURES ========== */
+    address public immutable OKP;
+    uint public blocksNeededForQueue;
 
-    enum STATUS {
-        RESERVEDEPOSITOR,
-        RESERVESPENDER,
-        RESERVETOKEN,
-        RESERVEMANAGER,
-        LIQUIDITYDEPOSITOR,
-        LIQUIDITYTOKEN,
-        LIQUIDITYMANAGER,
-        RESERVEDEBTOR,
-        REWARDMANAGER,
-        SOHM,
-        OHMDEBTOR
-    }
+    address[] public reserveTokens; // Push only, beware false-positives.
+    mapping( address => bool ) public isReserveToken;
+    mapping( address => uint ) public reserveTokenQueue; // Delays changes to mapping.
 
-    struct Queue {
-        STATUS managing;
-        address toPermit;
-        address calculator;
-        uint256 timelockEnd;
-        bool nullify;
-        bool executed;
-    }
+    address[] public reserveDepositors; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isReserveDepositor;
+    mapping( address => uint ) public reserveDepositorQueue; // Delays changes to mapping.
 
-    /* ========== STATE VARIABLES ========== */
+    address[] public reserveSpenders; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isReserveSpender;
+    mapping( address => uint ) public reserveSpenderQueue; // Delays changes to mapping.
 
-    IOHM public immutable OHM;
-    IsOHM public sOHM;
+    address[] public liquidityTokens; // Push only, beware false-positives.
+    mapping( address => bool ) public isLiquidityToken;
+    mapping( address => uint ) public LiquidityTokenQueue; // Delays changes to mapping.
 
-    mapping(STATUS => address[]) public registry;
-    mapping(STATUS => mapping(address => bool)) public permissions;
-    mapping(address => address) public bondCalculator;
+    address[] public liquidityDepositors; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isLiquidityDepositor;
+    mapping( address => uint ) public LiquidityDepositorQueue; // Delays changes to mapping.
 
-    mapping(address => uint256) public debtLimit;
+    mapping( address => address ) public bondCalculator; // bond calculator for liquidity token
 
-    uint256 public totalReserves;
-    uint256 public totalDebt;
-    uint256 public ohmDebt;
+    address[] public reserveManagers; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isReserveManager;
+    mapping( address => uint ) public ReserveManagerQueue; // Delays changes to mapping.
 
-    Queue[] public permissionQueue;
-    uint256 public immutable blocksNeededForQueue;
+    address[] public liquidityManagers; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isLiquidityManager;
+    mapping( address => uint ) public LiquidityManagerQueue; // Delays changes to mapping.
 
-    bool public timelockEnabled;
-    bool public initialized;
+    address[] public debtors; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isDebtor;
+    mapping( address => uint ) public debtorQueue; // Delays changes to mapping.
+    mapping( address => uint ) public debtorBalance;
 
-    uint256 public onChainGovernanceTimelock;
+    address[] public rewardManagers; // Push only, beware false-positives. Only for viewing.
+    mapping( address => bool ) public isRewardManager;
+    mapping( address => uint ) public rewardManagerQueue; // Delays changes to mapping.
 
-    string internal notAccepted = "Treasury: not accepted";
-    string internal notApproved = "Treasury: not approved";
-    string internal invalidToken = "Treasury: invalid token";
-    string internal insufficientReserves = "Treasury: insufficient reserves";
+    address public sOKP;
+    uint public sOKPQueue; // Delays change to sOKP address
+    
+    uint public totalReserves; // Risk-free value of all assets
+    uint public totalDebt;
 
-    /* ========== CONSTRUCTOR ========== */
-
-    constructor(
-        address _ohm,
-        uint256 _timelock,
-        address _authority
+    constructor (
+        address _OKP,
+        address _BUSD,
+        address _authority,
+        uint _blocksNeededForQueue
     ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
-        require(_ohm != address(0), "Zero address: OHM");
-        OHM = IOHM(_ohm);
+        require( _OKP != address(0) );
+        OKP = _OKP;
 
-        timelockEnabled = false;
-        initialized = false;
-        blocksNeededForQueue = _timelock;
+        isReserveToken[ _BUSD ] = true;
+        reserveTokens.push( _BUSD );
+
+        blocksNeededForQueue = _blocksNeededForQueue;
     }
 
-    /* ========== MUTATIVE FUNCTIONS ========== */
-
     /**
-     * @notice allow approved address to deposit an asset for OHM
-     * @param _amount uint256
-     * @param _token address
-     * @param _profit uint256
-     * @return send_ uint256
+        @notice allow approved address to deposit an asset for OKP
+        @param _amount uint
+        @param _token address
+        @param _profit uint
+        @return send_ uint
      */
-    function deposit(
-        uint256 _amount,
-        address _token,
-        uint256 _profit
-    ) external override returns (uint256 send_) {
-        if (permissions[STATUS.RESERVETOKEN][_token]) {
-            require(permissions[STATUS.RESERVEDEPOSITOR][msg.sender], notApproved);
-        } else if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            require(permissions[STATUS.LIQUIDITYDEPOSITOR][msg.sender], notApproved);
+    function deposit( uint _amount, address _token, uint _profit ) external returns ( uint send_ ) {
+        require( isReserveToken[ _token ] || isLiquidityToken[ _token ], "Not accepted" );
+        IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
+
+        if ( isReserveToken[ _token ] ) {
+            require( isReserveDepositor[ msg.sender ], "Not approved" );
         } else {
-            revert(invalidToken);
+            require( isLiquidityDepositor[ msg.sender ], "Not approved" );
         }
 
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        uint value = valueOf(_token, _amount);
+        // mint OKP needed and store amount of rewards for distribution
+        // s = 100000000000 - 99909426854 = 0.090573146
+        send_ = value.sub( _profit );
+        IERC20Mintable( OKP ).mint( msg.sender, send_ );
 
-        uint256 value = tokenValue(_token, _amount);
-        // mint OHM needed and store amount of rewards for distribution
-        send_ = value.sub(_profit);
-        OHM.mint(msg.sender, send_);
+        totalReserves = totalReserves.add( value );
+        emit ReservesUpdated( totalReserves );
 
-        totalReserves = totalReserves.add(value);
-
-        emit Deposit(_token, _amount, value);
+        emit Deposit( _token, _amount, value );
     }
 
     /**
-     * @notice allow approved address to burn OHM for reserves
-     * @param _amount uint256
-     * @param _token address
+        @notice allow approved address to burn OKP for reserves
+        @param _amount uint
+        @param _token address
      */
-    function withdraw(uint256 _amount, address _token) external override {
-        require(permissions[STATUS.RESERVETOKEN][_token], notAccepted); // Only reserves can be used for redemptions
-        require(permissions[STATUS.RESERVESPENDER][msg.sender], notApproved);
+    function withdraw( uint _amount, address _token ) external {
+        require( isReserveToken[ _token ], "Not accepted" ); // Only reserves can be used for redemptions
+        require( isReserveSpender[ msg.sender ] == true, "Not approved" );
 
-        uint256 value = tokenValue(_token, _amount);
-        OHM.burnFrom(msg.sender, value);
+        uint value = valueOf( _token, _amount );
+        IOHM( OKP ).burnFrom( msg.sender, value );
 
-        totalReserves = totalReserves.sub(value);
+        totalReserves = totalReserves.sub( value );
+        emit ReservesUpdated( totalReserves );
 
-        IERC20(_token).safeTransfer(msg.sender, _amount);
+        IERC20( _token ).safeTransfer( msg.sender, _amount );
 
-        emit Withdrawal(_token, _amount, value);
+        emit Withdrawal( _token, _amount, value );
     }
 
     /**
-     * @notice allow approved address to withdraw assets
-     * @param _token address
-     * @param _amount uint256
+        @notice allow approved address to borrow reserves
+        @param _amount uint
+        @param _token address
      */
-    function manage(address _token, uint256 _amount) external override {
-        if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            require(permissions[STATUS.LIQUIDITYMANAGER][msg.sender], notApproved);
+    function incurDebt( uint _amount, address _token ) external {
+        require( isDebtor[ msg.sender ], "Not approved" );
+        require( isReserveToken[ _token ], "Not accepted" );
+
+        uint value = valueOf( _token, _amount );
+
+        uint maximumDebt = IERC20( sOKP ).balanceOf( msg.sender ); // Can only borrow against sOKP held
+        uint availableDebt = maximumDebt.sub( debtorBalance[ msg.sender ] );
+        require( value <= availableDebt, "Exceeds debt limit" );
+
+        debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].add( value );
+        totalDebt = totalDebt.add( value );
+
+        totalReserves = totalReserves.sub( value );
+        emit ReservesUpdated( totalReserves );
+
+        IERC20( _token ).transfer( msg.sender, _amount );
+        
+        emit CreateDebt( msg.sender, _token, _amount, value );
+    }
+
+    /**
+        @notice allow approved address to repay borrowed reserves with reserves
+        @param _amount uint
+        @param _token address
+     */
+    function repayDebtWithReserve( uint _amount, address _token ) external {
+        require( isDebtor[ msg.sender ], "Not approved" );
+        require( isReserveToken[ _token ], "Not accepted" );
+
+        IERC20( _token ).safeTransferFrom( msg.sender, address(this), _amount );
+
+        uint value = valueOf( _token, _amount );
+        debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].sub( value );
+        totalDebt = totalDebt.sub( value );
+
+        totalReserves = totalReserves.add( value );
+        emit ReservesUpdated( totalReserves );
+
+        emit RepayDebt( msg.sender, _token, _amount, value );
+    }
+
+    /**
+        @notice allow approved address to repay borrowed reserves with OKP
+        @param _amount uint
+     */
+    function repayDebtWithOKP( uint _amount ) external {
+        require( isDebtor[ msg.sender ], "Not approved" );
+
+        IOHM( OKP ).burnFrom( msg.sender, _amount );
+
+        debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].sub( _amount );
+        totalDebt = totalDebt.sub( _amount );
+
+        emit RepayDebt( msg.sender, OKP, _amount, _amount );
+    }
+
+    /**
+        @notice allow approved address to withdraw assets
+        @param _token address
+        @param _amount uint
+     */
+    function manage( address _token, uint _amount ) external {
+        if( isLiquidityToken[ _token ] ) {
+            require( isLiquidityManager[ msg.sender ], "Not approved" );
         } else {
-            require(permissions[STATUS.RESERVEMANAGER][msg.sender], notApproved);
+            require( isReserveManager[ msg.sender ], "Not approved" );
         }
-        if (permissions[STATUS.RESERVETOKEN][_token] || permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            uint256 value = tokenValue(_token, _amount);
-            require(value <= excessReserves(), insufficientReserves);
-            totalReserves = totalReserves.sub(value);
-        }
-        IERC20(_token).safeTransfer(msg.sender, _amount);
-        emit Managed(_token, _amount);
+
+        uint value = valueOf(_token, _amount);
+        require( value <= excessReserves(), "Insufficient reserves" );
+
+        totalReserves = totalReserves.sub( value );
+        emit ReservesUpdated( totalReserves );
+
+        IERC20( _token ).safeTransfer( msg.sender, _amount );
+
+        emit ReservesManaged( _token, _amount );
     }
 
     /**
-     * @notice mint new OHM using excess reserves
-     * @param _recipient address
-     * @param _amount uint256
+        @notice send epoch reward to staking contract
      */
-    function mint(address _recipient, uint256 _amount) external override {
-        require(permissions[STATUS.REWARDMANAGER][msg.sender], notApproved);
-        require(_amount <= excessReserves(), insufficientReserves);
-        OHM.mint(_recipient, _amount);
-        emit Minted(msg.sender, _recipient, _amount);
+    function mintRewards( address _recipient, uint _amount ) external {
+        require( isRewardManager[ msg.sender ], "Not approved" );
+        require( _amount <= excessReserves(), "Insufficient reserves" );
+
+        IERC20Mintable( OKP ).mint( _recipient, _amount );
+
+        emit RewardsMinted( msg.sender, _recipient, _amount );
+    } 
+
+    /**
+        @notice returns excess reserves not backing tokens
+        @return uint
+     */
+    function excessReserves() public view returns ( uint ) {
+        return totalReserves.sub( IERC20( OKP ).totalSupply().sub( totalDebt ) );
     }
 
     /**
-     * DEBT: The debt functions allow approved addresses to borrow treasury assets
-     * or OHM from the treasury, using sOHM as collateral. This might allow an
-     * sOHM holder to provide OHM liquidity without taking on the opportunity cost
-     * of unstaking, or alter their backing without imposing risk onto the treasury.
-     * Many of these use cases are yet to be defined, but they appear promising.
-     * However, we urge the community to think critically and move slowly upon
-     * proposals to acquire these permissions.
+        @notice takes inventory of all tracked assets
+        @notice always consolidate to recognized reserves before audit
      */
-
-    /**
-     * @notice allow approved address to borrow reserves
-     * @param _amount uint256
-     * @param _token address
-     */
-    function incurDebt(uint256 _amount, address _token) external override {
-        uint256 value;
-        if (_token == address(OHM)) {
-            require(permissions[STATUS.OHMDEBTOR][msg.sender], notApproved);
-            value = _amount;
-        } else {
-            require(permissions[STATUS.RESERVEDEBTOR][msg.sender], notApproved);
-            require(permissions[STATUS.RESERVETOKEN][_token], notAccepted);
-            value = tokenValue(_token, _amount);
+    function auditReserves() external onlyGovernor() {
+        uint reserves;
+        for( uint i = 0; i < reserveTokens.length; i++ ) {
+            reserves = reserves.add ( 
+                valueOf( reserveTokens[ i ], IERC20( reserveTokens[ i ] ).balanceOf( address(this) ) )
+            );
         }
-        require(value != 0, invalidToken);
-
-        sOHM.changeDebt(value, msg.sender, true);
-        require(sOHM.debtBalances(msg.sender) <= debtLimit[msg.sender], "Treasury: exceeds limit");
-        totalDebt = totalDebt.add(value);
-
-        if (_token == address(OHM)) {
-            OHM.mint(msg.sender, value);
-            ohmDebt = ohmDebt.add(value);
-        } else {
-            totalReserves = totalReserves.sub(value);
-            IERC20(_token).safeTransfer(msg.sender, _amount);
-        }
-        emit CreateDebt(msg.sender, _token, _amount, value);
-    }
-
-    /**
-     * @notice allow approved address to repay borrowed reserves with reserves
-     * @param _amount uint256
-     * @param _token address
-     */
-    function repayDebtWithReserve(uint256 _amount, address _token) external override {
-        require(permissions[STATUS.RESERVEDEBTOR][msg.sender], notApproved);
-        require(permissions[STATUS.RESERVETOKEN][_token], notAccepted);
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 value = tokenValue(_token, _amount);
-        sOHM.changeDebt(value, msg.sender, false);
-        totalDebt = totalDebt.sub(value);
-        totalReserves = totalReserves.add(value);
-        emit RepayDebt(msg.sender, _token, _amount, value);
-    }
-
-    /**
-     * @notice allow approved address to repay borrowed reserves with OHM
-     * @param _amount uint256
-     */
-    function repayDebtWithOHM(uint256 _amount) external {
-        require(
-            permissions[STATUS.RESERVEDEBTOR][msg.sender] || permissions[STATUS.OHMDEBTOR][msg.sender],
-            notApproved
-        );
-        OHM.burnFrom(msg.sender, _amount);
-        sOHM.changeDebt(_amount, msg.sender, false);
-        totalDebt = totalDebt.sub(_amount);
-        ohmDebt = ohmDebt.sub(_amount);
-        emit RepayDebt(msg.sender, address(OHM), _amount, _amount);
-    }
-
-    /* ========== MANAGERIAL FUNCTIONS ========== */
-
-    /**
-     * @notice takes inventory of all tracked assets
-     * @notice always consolidate to recognized reserves before audit
-     */
-    function auditReserves() external onlyGovernor {
-        uint256 reserves;
-        address[] memory reserveToken = registry[STATUS.RESERVETOKEN];
-        for (uint256 i = 0; i < reserveToken.length; i++) {
-            if (permissions[STATUS.RESERVETOKEN][reserveToken[i]]) {
-                reserves = reserves.add(tokenValue(reserveToken[i], IERC20(reserveToken[i]).balanceOf(address(this))));
-            }
-        }
-        address[] memory liquidityToken = registry[STATUS.LIQUIDITYTOKEN];
-        for (uint256 i = 0; i < liquidityToken.length; i++) {
-            if (permissions[STATUS.LIQUIDITYTOKEN][liquidityToken[i]]) {
-                reserves = reserves.add(
-                    tokenValue(liquidityToken[i], IERC20(liquidityToken[i]).balanceOf(address(this)))
-                );
-            }
+        for( uint i = 0; i < liquidityTokens.length; i++ ) {
+            reserves = reserves.add (
+                valueOf( liquidityTokens[ i ], IERC20( liquidityTokens[ i ] ).balanceOf( address(this) ) )
+            );
         }
         totalReserves = reserves;
-        emit ReservesAudited(reserves);
+        emit ReservesUpdated( reserves );
+        emit ReservesAudited( reserves );
     }
 
     /**
-     * @notice set max debt for address
-     * @param _address address
-     * @param _limit uint256
+        @notice returns OKP valuation of asset
+        @param _token address
+        @param _amount uint
+        @return value_ uint
      */
-    function setDebtLimit(address _address, uint256 _limit) external onlyGovernor {
-        debtLimit[_address] = _limit;
+    function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
+        if ( isReserveToken[ _token ] ) {
+            // convert amount to match OKP decimals
+            value_ = _amount.mul( 10 ** IERC20Metadata( OKP ).decimals() ).div( 10 ** IERC20Metadata( _token ).decimals() );
+        } else if ( isLiquidityToken[ _token ] ) {
+            value_ = IBondingCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
+        }
+    }
+
+    function setNeededQueueBlock(uint _blocksNeededForQueue) public onlyGovernor() {
+        blocksNeededForQueue = _blocksNeededForQueue;
+    }
+    /**
+        @notice queue address to change boolean in mapping
+        @param _managing MANAGING
+        @param _address address
+        @return bool
+     */
+    function queue( MANAGING _managing, address _address ) external onlyGovernor() returns ( bool ) {
+        require( _address != address(0) );
+        if ( _managing == MANAGING.RESERVEDEPOSITOR ) { // 0
+            reserveDepositorQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.RESERVESPENDER ) { // 1
+            reserveSpenderQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.RESERVETOKEN ) { // 2
+            reserveTokenQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.RESERVEMANAGER ) { // 3
+            ReserveManagerQueue[ _address ] = block.number.add( blocksNeededForQueue.mul( 2 ) );
+        } else if ( _managing == MANAGING.LIQUIDITYDEPOSITOR ) { // 4
+            LiquidityDepositorQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.LIQUIDITYTOKEN ) { // 5
+            LiquidityTokenQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.LIQUIDITYMANAGER ) { // 6
+            LiquidityManagerQueue[ _address ] = block.number.add( blocksNeededForQueue.mul( 2 ) );
+        } else if ( _managing == MANAGING.DEBTOR ) { // 7
+            debtorQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.REWARDMANAGER ) { // 8
+            rewardManagerQueue[ _address ] = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.SOKP ) { // 9
+            sOKPQueue = block.number.add( blocksNeededForQueue );
+        } else return false;
+
+        emit ChangeQueued( _managing, _address );
+        return true;
     }
 
     /**
-     * @notice enable permission from queue
-     * @param _status STATUS
-     * @param _address address
-     * @param _calculator address
+        @notice verify queue then set boolean in mapping
+        @param _managing MANAGING
+        @param _address address
+        @param _calculator address
+        @return bool
      */
-    function enable(
-        STATUS _status,
-        address _address,
-        address _calculator
-    ) external onlyGovernor {
-        require(timelockEnabled == false, "Use queueTimelock");
-        if (_status == STATUS.SOHM) {
-            sOHM = IsOHM(_address);
-        } else {
-            permissions[_status][_address] = true;
-
-            if (_status == STATUS.LIQUIDITYTOKEN) {
-                bondCalculator[_address] = _calculator;
-            }
-
-            (bool registered, ) = indexInRegistry(_address, _status);
-            if (!registered) {
-                registry[_status].push(_address);
-
-                if (_status == STATUS.LIQUIDITYTOKEN || _status == STATUS.RESERVETOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(_address, _status);
-                    if (reg) {
-                        delete registry[_status][index];
-                    }
+    function toggle( MANAGING _managing, address _address, address _calculator ) external onlyGovernor() returns ( bool ) {
+        require( _address != address(0) );
+        bool result;
+        if ( _managing == MANAGING.RESERVEDEPOSITOR ) { // 0
+            if ( requirements( reserveDepositorQueue, isReserveDepositor, _address ) ) {
+                reserveDepositorQueue[ _address ] = 0;
+                if( !listContains( reserveDepositors, _address ) ) {
+                    reserveDepositors.push( _address );
                 }
             }
-        }
-        emit Permissioned(_address, _status, true);
-    }
-
-    /**
-     *  @notice disable permission from address
-     *  @param _status STATUS
-     *  @param _toDisable address
-     */
-    function disable(STATUS _status, address _toDisable) external {
-        require(msg.sender == authority.governor() || msg.sender == authority.guardian(), "Only governor or guardian");
-        permissions[_status][_toDisable] = false;
-        emit Permissioned(_toDisable, _status, false);
-    }
-
-    /**
-     * @notice check if registry contains address
-     * @return (bool, uint256)
-     */
-    function indexInRegistry(address _address, STATUS _status) public view returns (bool, uint256) {
-        address[] memory entries = registry[_status];
-        for (uint256 i = 0; i < entries.length; i++) {
-            if (_address == entries[i]) {
-                return (true, i);
-            }
-        }
-        return (false, 0);
-    }
-
-    /* ========== TIMELOCKED FUNCTIONS ========== */
-
-    // functions are used prior to enabling on-chain governance
-
-    /**
-     * @notice queue address to receive permission
-     * @param _status STATUS
-     * @param _address address
-     * @param _calculator address
-     */
-    function queueTimelock(
-        STATUS _status,
-        address _address,
-        address _calculator
-    ) external onlyGovernor {
-        require(_address != address(0));
-        require(timelockEnabled == true, "Timelock is disabled, use enable");
-
-        uint256 timelock = block.number.add(blocksNeededForQueue);
-        if (_status == STATUS.RESERVEMANAGER || _status == STATUS.LIQUIDITYMANAGER) {
-            timelock = block.number.add(blocksNeededForQueue.mul(2));
-        }
-        permissionQueue.push(
-            Queue({
-                managing: _status,
-                toPermit: _address,
-                calculator: _calculator,
-                timelockEnd: timelock,
-                nullify: false,
-                executed: false
-            })
-        );
-        emit PermissionQueued(_status, _address);
-    }
-
-    /**
-     *  @notice enable queued permission
-     *  @param _index uint256
-     */
-    function execute(uint256 _index) external {
-        require(timelockEnabled == true, "Timelock is disabled, use enable");
-
-        Queue memory info = permissionQueue[_index];
-
-        require(!info.nullify, "Action has been nullified");
-        require(!info.executed, "Action has already been executed");
-        require(block.number >= info.timelockEnd, "Timelock not complete");
-
-        if (info.managing == STATUS.SOHM) {
-            // 9
-            sOHM = IsOHM(info.toPermit);
-        } else {
-            permissions[info.managing][info.toPermit] = true;
-
-            if (info.managing == STATUS.LIQUIDITYTOKEN) {
-                bondCalculator[info.toPermit] = info.calculator;
-            }
-            (bool registered, ) = indexInRegistry(info.toPermit, info.managing);
-            if (!registered) {
-                registry[info.managing].push(info.toPermit);
-
-                if (info.managing == STATUS.LIQUIDITYTOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(info.toPermit, STATUS.RESERVETOKEN);
-                    if (reg) {
-                        delete registry[STATUS.RESERVETOKEN][index];
-                    }
-                } else if (info.managing == STATUS.RESERVETOKEN) {
-                    (bool reg, uint256 index) = indexInRegistry(info.toPermit, STATUS.LIQUIDITYTOKEN);
-                    if (reg) {
-                        delete registry[STATUS.LIQUIDITYTOKEN][index];
-                    }
+            result = !isReserveDepositor[ _address ];
+            isReserveDepositor[ _address ] = result;
+            
+        } else if ( _managing == MANAGING.RESERVESPENDER ) { // 1
+            if ( requirements( reserveSpenderQueue, isReserveSpender, _address ) ) {
+                reserveSpenderQueue[ _address ] = 0;
+                if( !listContains( reserveSpenders, _address ) ) {
+                    reserveSpenders.push( _address );
                 }
             }
+            result = !isReserveSpender[ _address ];
+            isReserveSpender[ _address ] = result;
+
+        } else if ( _managing == MANAGING.RESERVETOKEN ) { // 2
+            if ( requirements( reserveTokenQueue, isReserveToken, _address ) ) {
+                reserveTokenQueue[ _address ] = 0;
+                if( !listContains( reserveTokens, _address ) ) {
+                    reserveTokens.push( _address );
+                }
+            }
+            result = !isReserveToken[ _address ];
+            isReserveToken[ _address ] = result;
+
+        } else if ( _managing == MANAGING.RESERVEMANAGER ) { // 3
+            if ( requirements( ReserveManagerQueue, isReserveManager, _address ) ) {
+                reserveManagers.push( _address );
+                ReserveManagerQueue[ _address ] = 0;
+                if( !listContains( reserveManagers, _address ) ) {
+                    reserveManagers.push( _address );
+                }
+            }
+            result = !isReserveManager[ _address ];
+            isReserveManager[ _address ] = result;
+
+        } else if ( _managing == MANAGING.LIQUIDITYDEPOSITOR ) { // 4
+            if ( requirements( LiquidityDepositorQueue, isLiquidityDepositor, _address ) ) {
+                liquidityDepositors.push( _address );
+                LiquidityDepositorQueue[ _address ] = 0;
+                if( !listContains( liquidityDepositors, _address ) ) {
+                    liquidityDepositors.push( _address );
+                }
+            }
+            result = !isLiquidityDepositor[ _address ];
+            isLiquidityDepositor[ _address ] = result;
+
+        } else if ( _managing == MANAGING.LIQUIDITYTOKEN ) { // 5
+            if ( requirements( LiquidityTokenQueue, isLiquidityToken, _address ) ) {
+                LiquidityTokenQueue[ _address ] = 0;
+                if( !listContains( liquidityTokens, _address ) ) {
+                    liquidityTokens.push( _address );
+                }
+            }
+            result = !isLiquidityToken[ _address ];
+            isLiquidityToken[ _address ] = result;
+            bondCalculator[ _address ] = _calculator;
+
+        } else if ( _managing == MANAGING.LIQUIDITYMANAGER ) { // 6
+            if ( requirements( LiquidityManagerQueue, isLiquidityManager, _address ) ) {
+                LiquidityManagerQueue[ _address ] = 0;
+                if( !listContains( liquidityManagers, _address ) ) {
+                    liquidityManagers.push( _address );
+                }
+            }
+            result = !isLiquidityManager[ _address ];
+            isLiquidityManager[ _address ] = result;
+
+        } else if ( _managing == MANAGING.DEBTOR ) { // 7
+            if ( requirements( debtorQueue, isDebtor, _address ) ) {
+                debtorQueue[ _address ] = 0;
+                if( !listContains( debtors, _address ) ) {
+                    debtors.push( _address );
+                }
+            }
+            result = !isDebtor[ _address ];
+            isDebtor[ _address ] = result;
+
+        } else if ( _managing == MANAGING.REWARDMANAGER ) { // 8
+            if ( requirements( rewardManagerQueue, isRewardManager, _address ) ) {
+                rewardManagerQueue[ _address ] = 0;
+                if( !listContains( rewardManagers, _address ) ) {
+                    rewardManagers.push( _address );
+                }
+            }
+            result = !isRewardManager[ _address ];
+            isRewardManager[ _address ] = result;
+
+        } else if ( _managing == MANAGING.SOKP ) { // 9
+            sOKPQueue = 0;
+            sOKP = _address;
+            result = true;
+
+        } else return false;
+
+        emit ChangeActivated( _managing, _address, result );
+        return true;
+    }
+
+    /**
+        @notice checks requirements and returns altered structs
+        @param queue_ mapping( address => uint )
+        @param status_ mapping( address => bool )
+        @param _address address
+        @return bool 
+     */
+    function requirements( 
+        mapping( address => uint ) storage queue_, 
+        mapping( address => bool ) storage status_, 
+        address _address 
+    ) internal view returns ( bool ) {
+        if ( !status_[ _address ] ) {
+            require( queue_[ _address ] != 0, "Must queue" );
+            require( queue_[ _address ] <= block.number, "Queue not expired" );
+            return true;
+        } return false;
+    }
+
+    /**
+        @notice checks array to ensure against duplicate
+        @param _list address[]
+        @param _token address
+        @return bool
+     */
+    function listContains( address[] storage _list, address _token ) internal view returns ( bool ) {
+        for( uint i = 0; i < _list.length; i++ ) {
+            if( _list[ i ] == _token ) {
+                return true;
+            }
         }
-        permissionQueue[_index].executed = true;
-        emit Permissioned(info.toPermit, info.managing, true);
-    }
-
-    /**
-     * @notice cancel timelocked action
-     * @param _index uint256
-     */
-    function nullify(uint256 _index) external onlyGovernor {
-        permissionQueue[_index].nullify = true;
-    }
-
-    /**
-     * @notice disables timelocked functions
-     */
-    function disableTimelock() external onlyGovernor {
-        require(timelockEnabled == true, "timelock already disabled");
-        if (onChainGovernanceTimelock != 0 && onChainGovernanceTimelock <= block.number) {
-            timelockEnabled = false;
-        } else {
-            onChainGovernanceTimelock = block.number.add(blocksNeededForQueue.mul(7)); // 7-day timelock
-        }
-    }
-
-    /**
-     * @notice enables timelocks after initilization
-     */
-    function initialize() external onlyGovernor {
-        require(initialized == false, "Already initialized");
-        timelockEnabled = true;
-        initialized = true;
-    }
-
-    /* ========== VIEW FUNCTIONS ========== */
-
-    /**
-     * @notice returns excess reserves not backing tokens
-     * @return uint
-     */
-    function excessReserves() public view override returns (uint256) {
-        return totalReserves.sub(OHM.totalSupply().sub(totalDebt));
-    }
-
-    /**
-     * @notice returns OHM valuation of asset
-     * @param _token address
-     * @param _amount uint256
-     * @return value_ uint256
-     */
-    function tokenValue(address _token, uint256 _amount) public view override returns (uint256 value_) {
-        value_ = _amount.mul(10**IERC20Metadata(address(OHM)).decimals()).div(10**IERC20Metadata(_token).decimals());
-
-        if (permissions[STATUS.LIQUIDITYTOKEN][_token]) {
-            value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
-        }
-    }
-
-    /**
-     * @notice returns supply metric that cannot be manipulated by debt
-     * @dev use this any time you need to query supply
-     * @return uint256
-     */
-    function baseSupply() external view override returns (uint256) {
-        return OHM.totalSupply() - ohmDebt;
+        return false;
     }
 }

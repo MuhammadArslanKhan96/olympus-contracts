@@ -397,6 +397,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MockSOHM__factory>;
     getContractFactory(
+      name: "OkapiAuthority",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OkapiAuthority__factory>;
+    getContractFactory(
+      name: "OkapiERC20Token",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OkapiERC20Token__factory>;
+    getContractFactory(
       name: "ERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ERC20__factory>;
@@ -409,29 +417,69 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.WOHM__factory>;
     getContractFactory(
-      name: "OlympusAuthority",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OlympusAuthority__factory>;
-    getContractFactory(
-      name: "OlympusERC20Token",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OlympusERC20Token__factory>;
-    getContractFactory(
       name: "YieldDirector",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.YieldDirector__factory>;
     getContractFactory(
-      name: "SOlympus",
+      name: "IOwnable",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.SOlympus__factory>;
+    ): Promise<Contracts.IOwnable__factory>;
     getContractFactory(
-      name: "OlympusStaking",
+      name: "Ownable",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OlympusStaking__factory>;
+    ): Promise<Contracts.Ownable__factory>;
+    getContractFactory(
+      name: "SOkapi",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SOkapi__factory>;
+    getContractFactory(
+      name: "IWarmup",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IWarmup__factory>;
+    getContractFactory(
+      name: "OkapiStaking",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OkapiStaking__factory>;
     getContractFactory(
       name: "Distributor",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Distributor__factory>;
+    getContractFactory(
+      name: "IERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC20__factory>;
+    getContractFactory(
+      name: "IPolicy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IPolicy__factory>;
+    getContractFactory(
+      name: "ITreasury",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ITreasury__factory>;
+    getContractFactory(
+      name: "Policy",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Policy__factory>;
+    getContractFactory(
+      name: "IERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC20__factory>;
+    getContractFactory(
+      name: "IStaking",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IStaking__factory>;
+    getContractFactory(
+      name: "StakingHelper",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StakingHelper__factory>;
+    getContractFactory(
+      name: "IERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC20__factory>;
+    getContractFactory(
+      name: "StakingWarmup",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.StakingWarmup__factory>;
     getContractFactory(
       name: "OlympusBondingCalculator",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -441,9 +489,13 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OhmFaucet__factory>;
     getContractFactory(
-      name: "OlympusTreasury",
+      name: "IERC20Mintable",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.OlympusTreasury__factory>;
+    ): Promise<Contracts.IERC20Mintable__factory>;
+    getContractFactory(
+      name: "OKPTreasury",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OKPTreasury__factory>;
     getContractFactory(
       name: "ERC20",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -978,6 +1030,16 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.MockSOHM>;
     getContractAt(
+      name: "OkapiAuthority",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OkapiAuthority>;
+    getContractAt(
+      name: "OkapiERC20Token",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OkapiERC20Token>;
+    getContractAt(
       name: "ERC20",
       address: string,
       signer?: ethers.Signer
@@ -993,35 +1055,85 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.WOHM>;
     getContractAt(
-      name: "OlympusAuthority",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.OlympusAuthority>;
-    getContractAt(
-      name: "OlympusERC20Token",
-      address: string,
-      signer?: ethers.Signer
-    ): Promise<Contracts.OlympusERC20Token>;
-    getContractAt(
       name: "YieldDirector",
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.YieldDirector>;
     getContractAt(
-      name: "SOlympus",
+      name: "IOwnable",
       address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.SOlympus>;
+    ): Promise<Contracts.IOwnable>;
     getContractAt(
-      name: "OlympusStaking",
+      name: "Ownable",
       address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.OlympusStaking>;
+    ): Promise<Contracts.Ownable>;
+    getContractAt(
+      name: "SOkapi",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SOkapi>;
+    getContractAt(
+      name: "IWarmup",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IWarmup>;
+    getContractAt(
+      name: "OkapiStaking",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OkapiStaking>;
     getContractAt(
       name: "Distributor",
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.Distributor>;
+    getContractAt(
+      name: "IERC20",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20>;
+    getContractAt(
+      name: "IPolicy",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IPolicy>;
+    getContractAt(
+      name: "ITreasury",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ITreasury>;
+    getContractAt(
+      name: "Policy",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Policy>;
+    getContractAt(
+      name: "IERC20",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20>;
+    getContractAt(
+      name: "IStaking",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IStaking>;
+    getContractAt(
+      name: "StakingHelper",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StakingHelper>;
+    getContractAt(
+      name: "IERC20",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20>;
+    getContractAt(
+      name: "StakingWarmup",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StakingWarmup>;
     getContractAt(
       name: "OlympusBondingCalculator",
       address: string,
@@ -1033,10 +1145,15 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.OhmFaucet>;
     getContractAt(
-      name: "OlympusTreasury",
+      name: "IERC20Mintable",
       address: string,
       signer?: ethers.Signer
-    ): Promise<Contracts.OlympusTreasury>;
+    ): Promise<Contracts.IERC20Mintable>;
+    getContractAt(
+      name: "OKPTreasury",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OKPTreasury>;
     getContractAt(
       name: "ERC20",
       address: string,

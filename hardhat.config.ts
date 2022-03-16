@@ -150,7 +150,7 @@ const config: HardhatUserConfig = {
     //     target: "ethers-v5",
     // },
     etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY,
+        apiKey: "2GZFXTGF6YV8747AV8BCURH2ZURZS9WPDS",
     },    
     // bscscan: {
     //     apiKey: "2GZFXTGF6YV8747AV8BCURH2ZURZS9WPDS"

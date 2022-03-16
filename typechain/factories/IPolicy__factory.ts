@@ -4,18 +4,25 @@
 
 import { Contract, Signer, utils } from "ethers";
 import { Provider } from "@ethersproject/providers";
-import type { IStaking, IStakingInterface } from "../IStaking";
+import type { IPolicy, IPolicyInterface } from "../IPolicy";
 
 const _abi = [
   {
-    inputs: [
+    inputs: [],
+    name: "policy",
+    outputs: [
       {
         internalType: "address",
-        name: "_recipient",
+        name: "",
         type: "address",
       },
     ],
-    name: "claim",
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "pullPolicy",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -23,38 +30,34 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "_amount",
-        type: "uint256",
-      },
-      {
         internalType: "address",
-        name: "_recipient",
+        name: "newPolicy_",
         type: "address",
       },
     ],
-    name: "stake",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    name: "pushPolicy",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "renouncePolicy",
+    outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
 ];
 
-export class IStaking__factory {
+export class IPolicy__factory {
   static readonly abi = _abi;
-  static createInterface(): IStakingInterface {
-    return new utils.Interface(_abi) as IStakingInterface;
+  static createInterface(): IPolicyInterface {
+    return new utils.Interface(_abi) as IPolicyInterface;
   }
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IStaking {
-    return new Contract(address, _abi, signerOrProvider) as IStaking;
+  ): IPolicy {
+    return new Contract(address, _abi, signerOrProvider) as IPolicy;
   }
 }

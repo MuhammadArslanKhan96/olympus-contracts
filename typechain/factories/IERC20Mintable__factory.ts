@@ -4,18 +4,26 @@
 
 import { Contract, Signer, utils } from "ethers";
 import { Provider } from "@ethersproject/providers";
-import type { IStaking, IStakingInterface } from "../IStaking";
+import type {
+  IERC20Mintable,
+  IERC20MintableInterface,
+} from "../IERC20Mintable";
 
 const _abi = [
   {
     inputs: [
       {
         internalType: "address",
-        name: "_recipient",
+        name: "account_",
         type: "address",
       },
+      {
+        internalType: "uint256",
+        name: "ammount_",
+        type: "uint256",
+      },
     ],
-    name: "claim",
+    name: "mint",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -24,37 +32,26 @@ const _abi = [
     inputs: [
       {
         internalType: "uint256",
-        name: "_amount",
+        name: "amount_",
         type: "uint256",
       },
-      {
-        internalType: "address",
-        name: "_recipient",
-        type: "address",
-      },
     ],
-    name: "stake",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
+    name: "mint",
+    outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
 ];
 
-export class IStaking__factory {
+export class IERC20Mintable__factory {
   static readonly abi = _abi;
-  static createInterface(): IStakingInterface {
-    return new utils.Interface(_abi) as IStakingInterface;
+  static createInterface(): IERC20MintableInterface {
+    return new utils.Interface(_abi) as IERC20MintableInterface;
   }
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IStaking {
-    return new Contract(address, _abi, signerOrProvider) as IStaking;
+  ): IERC20Mintable {
+    return new Contract(address, _abi, signerOrProvider) as IERC20Mintable;
   }
 }

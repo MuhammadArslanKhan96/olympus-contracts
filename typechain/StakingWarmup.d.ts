@@ -19,25 +19,28 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface IStakingInterface extends ethers.utils.Interface {
+interface StakingWarmupInterface extends ethers.utils.Interface {
   functions: {
-    "claim(address)": FunctionFragment;
-    "stake(uint256,address)": FunctionFragment;
+    "retrieve(address,uint256)": FunctionFragment;
+    "sOKP()": FunctionFragment;
+    "staking()": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "claim", values: [string]): string;
   encodeFunctionData(
-    functionFragment: "stake",
-    values: [BigNumberish, string]
+    functionFragment: "retrieve",
+    values: [string, BigNumberish]
   ): string;
+  encodeFunctionData(functionFragment: "sOKP", values?: undefined): string;
+  encodeFunctionData(functionFragment: "staking", values?: undefined): string;
 
-  decodeFunctionResult(functionFragment: "claim", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "stake", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "retrieve", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "sOKP", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "staking", data: BytesLike): Result;
 
   events: {};
 }
 
-export class IStaking extends BaseContract {
+export class StakingWarmup extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -78,67 +81,65 @@ export class IStaking extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: IStakingInterface;
+  interface: StakingWarmupInterface;
 
   functions: {
-    claim(
-      _recipient: string,
+    retrieve(
+      _staker: string,
+      _amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
+    sOKP(overrides?: CallOverrides): Promise<[string]>;
+
+    staking(overrides?: CallOverrides): Promise<[string]>;
   };
 
-  claim(
-    _recipient: string,
+  retrieve(
+    _staker: string,
+    _amount: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  stake(
-    _amount: BigNumberish,
-    _recipient: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
+  sOKP(overrides?: CallOverrides): Promise<string>;
+
+  staking(overrides?: CallOverrides): Promise<string>;
 
   callStatic: {
-    claim(_recipient: string, overrides?: CallOverrides): Promise<void>;
-
-    stake(
+    retrieve(
+      _staker: string,
       _amount: BigNumberish,
-      _recipient: string,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<void>;
+
+    sOKP(overrides?: CallOverrides): Promise<string>;
+
+    staking(overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {};
 
   estimateGas: {
-    claim(
-      _recipient: string,
+    retrieve(
+      _staker: string,
+      _amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
+    sOKP(overrides?: CallOverrides): Promise<BigNumber>;
+
+    staking(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    claim(
-      _recipient: string,
+    retrieve(
+      _staker: string,
+      _amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
+    sOKP(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    staking(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }

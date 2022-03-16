@@ -19,25 +19,25 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface IStakingInterface extends ethers.utils.Interface {
+interface StakingHelperInterface extends ethers.utils.Interface {
   functions: {
-    "claim(address)": FunctionFragment;
-    "stake(uint256,address)": FunctionFragment;
+    "OKP()": FunctionFragment;
+    "stake(uint256)": FunctionFragment;
+    "staking()": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "claim", values: [string]): string;
-  encodeFunctionData(
-    functionFragment: "stake",
-    values: [BigNumberish, string]
-  ): string;
+  encodeFunctionData(functionFragment: "OKP", values?: undefined): string;
+  encodeFunctionData(functionFragment: "stake", values: [BigNumberish]): string;
+  encodeFunctionData(functionFragment: "staking", values?: undefined): string;
 
-  decodeFunctionResult(functionFragment: "claim", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "OKP", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "stake", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "staking", data: BytesLike): Result;
 
   events: {};
 }
 
-export class IStaking extends BaseContract {
+export class StakingHelper extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -78,67 +78,57 @@ export class IStaking extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: IStakingInterface;
+  interface: StakingHelperInterface;
 
   functions: {
-    claim(
-      _recipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
+    OKP(overrides?: CallOverrides): Promise<[string]>;
 
     stake(
       _amount: BigNumberish,
-      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
+
+    staking(overrides?: CallOverrides): Promise<[string]>;
   };
 
-  claim(
-    _recipient: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
+  OKP(overrides?: CallOverrides): Promise<string>;
 
   stake(
     _amount: BigNumberish,
-    _recipient: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  callStatic: {
-    claim(_recipient: string, overrides?: CallOverrides): Promise<void>;
+  staking(overrides?: CallOverrides): Promise<string>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+  callStatic: {
+    OKP(overrides?: CallOverrides): Promise<string>;
+
+    stake(_amount: BigNumberish, overrides?: CallOverrides): Promise<void>;
+
+    staking(overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {};
 
   estimateGas: {
-    claim(
-      _recipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
+    OKP(overrides?: CallOverrides): Promise<BigNumber>;
 
     stake(
       _amount: BigNumberish,
-      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
+
+    staking(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    claim(
-      _recipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
+    OKP(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     stake(
       _amount: BigNumberish,
-      _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
+
+    staking(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }

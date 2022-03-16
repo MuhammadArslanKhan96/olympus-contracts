@@ -6,304 +6,283 @@ import "./libraries/SafeERC20.sol";
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/IsOHM.sol";
+import "./interfaces/IOHM.sol";
 import "./interfaces/IgOHM.sol";
 import "./interfaces/IDistributor.sol";
 
 import "./types/OlympusAccessControlled.sol";
+import "./types/ERC20.sol";
 
-contract OlympusStaking is OlympusAccessControlled {
-    /* ========== DEPENDENCIES ========== */
+interface IWarmup {
+    function retrieve( address staker_, uint amount_ ) external;
+}
+
+contract OkapiStaking is OlympusAccessControlled {
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-    using SafeERC20 for IsOHM;
-    using SafeERC20 for IgOHM;
 
-    /* ========== EVENTS ========== */
-
-    event DistributorSet(address distributor);
-    event WarmupSet(uint256 warmup);
-
-    /* ========== DATA STRUCTURES ========== */
+    address public immutable OKP;
+    address public immutable sOKP;
 
     struct Epoch {
-        uint256 length; // in seconds
-        uint256 number; // since inception
-        uint256 end; // timestamp
-        uint256 distribute; // amount
+        uint length;
+        uint number;
+        uint endBlock;
+        uint distribute;
+    }
+    Epoch public epoch;
+
+    address public distributor;
+    
+    address public locker;
+    uint public totalBonus;
+    
+    address public warmupContract;
+    uint public warmupPeriod;
+    
+    constructor ( 
+        address _OKP, 
+        address _sOKP, 
+        address _authority,
+        uint _epochLength,
+        uint _firstEpochNumber,
+        uint _firstEpochBlock
+    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
+        require( _OKP != address(0) );
+        OKP = _OKP;
+        require( _sOKP != address(0) );
+        sOKP = _sOKP;
+        
+        epoch = Epoch({
+            length: _epochLength,
+            number: _firstEpochNumber,
+            endBlock: _firstEpochBlock,
+            distribute: 0
+        });
     }
 
     struct Claim {
-        uint256 deposit; // if forfeiting
-        uint256 gons; // staked balance
-        uint256 expiry; // end of warmup period
-        bool lock; // prevents malicious delays for claim
+        uint deposit;
+        uint gons;
+        uint expiry;
+        bool lock; // prevents malicious delays
+    }
+    mapping( address => Claim ) public warmupInfo;
+
+    // Vesting period is use to sustainibilty for project ==> User will paid 10% if he/she unstake their coin before 10 days after staking
+    struct VestingPeriod {
+        uint256 period;
+        address user;
+        uint256 amount;
     }
 
-    /* ========== STATE VARIABLES ========== */
+    mapping(address => VestingPeriod) public vestingPeriodInfo;
 
-    IERC20 public immutable OHM;
-    IsOHM public immutable sOHM;
-    IgOHM public immutable gOHM;
-
-    Epoch public epoch;
-
-    IDistributor public distributor;
-
-    mapping(address => Claim) public warmupInfo;
-    uint256 public warmupPeriod;
-    uint256 private gonsInWarmup;
-
-    /* ========== CONSTRUCTOR ========== */
-
-    constructor(
-        address _ohm,
-        address _sOHM,
-        address _gOHM,
-        uint256 _epochLength,
-        uint256 _firstEpochNumber,
-        uint256 _firstEpochTime,
-        address _authority
-    ) OlympusAccessControlled(IOlympusAuthority(_authority)) {
-        require(_ohm != address(0), "Zero address: OHM");
-        OHM = IERC20(_ohm);
-        require(_sOHM != address(0), "Zero address: sOHM");
-        sOHM = IsOHM(_sOHM);
-        require(_gOHM != address(0), "Zero address: gOHM");
-        gOHM = IgOHM(_gOHM);
-
-        epoch = Epoch({length: _epochLength, number: _firstEpochNumber, end: _firstEpochTime, distribute: 0});
+    
+    struct DeductionFee {
+        uint256 burn = 500;
+        uint256 team = 500;
+        address teamWallet;
     }
 
-    /* ========== MUTATIVE FUNCTIONS ========== */
+    DeductionFee public deductionFee;
 
     /**
-     * @notice stake OHM to enter warmup
-     * @param _to address
-     * @param _amount uint
-     * @param _claim bool
-     * @param _rebasing bool
-     * @return uint
+        @notice stake OKP to enter warmup
+        @param _amount uint
+        @return bool
      */
-    function stake(
-        address _to,
-        uint256 _amount,
-        bool _rebasing,
-        bool _claim
-    ) external returns (uint256) {
-        OHM.safeTransferFrom(msg.sender, address(this), _amount);
-        _amount = _amount.add(rebase()); // add bounty if rebase occurred
-        if (_claim && warmupPeriod == 0) {
-            return _send(_to, _amount, _rebasing);
-        } else {
-            Claim memory info = warmupInfo[_to];
-            if (!info.lock) {
-                require(_to == msg.sender, "External deposits for account are locked");
-            }
+    function stake( uint _amount, address _recipient ) external returns ( bool ) {
+        rebase();
+        
+        IERC20( OKP ).safeTransferFrom( msg.sender, address(this), _amount );
 
-            warmupInfo[_to] = Claim({
-                deposit: info.deposit.add(_amount),
-                gons: info.gons.add(sOHM.gonsForBalance(_amount)),
-                expiry: epoch.number.add(warmupPeriod),
-                lock: info.lock
-            });
+        Claim memory info = warmupInfo[ _recipient ];
+        require( !info.lock, "Deposits for account are locked" );
 
-            gonsInWarmup = gonsInWarmup.add(sOHM.gonsForBalance(_amount));
+        warmupInfo[ _recipient ] = Claim ({
+            deposit: info.deposit.add( _amount ),
+            gons: info.gons.add( IsOHM( sOKP ).gonsForBalance( _amount ) ),
+            expiry: epoch.number.add( warmupPeriod ),
+            lock: false
+        });
+        
+        VestingPeriod memory periodInfo = vestingPeriodInfo[ msg.sender ];
+        vestingPeriodInfo[_recipient] = VestingPeriod({
+            period: block.timestamp + 10 days,
+            user: _recipient,
+            amount: periodInfo.amount.add(_amount)
+        });
+        
+        IERC20( sOKP ).safeTransfer( warmupContract, _amount );
+        return true;
+    }
 
-            return _amount;
+    /**
+        @notice retrieve sOKP from warmup
+        @param _recipient address
+     */
+    function claim ( address _recipient ) public {
+        Claim memory info = warmupInfo[ _recipient ];
+        if ( epoch.number >= info.expiry && info.expiry != 0 ) {
+            delete warmupInfo[ _recipient ];
+            IWarmup( warmupContract ).retrieve( _recipient, IsOHM( sOKP ).balanceForGons( info.gons ) );
         }
     }
 
     /**
-     * @notice retrieve stake from warmup
-     * @param _to address
-     * @param _rebasing bool
-     * @return uint
+        @notice forfeit sOKP in warmup and retrieve OKP
      */
-    function claim(address _to, bool _rebasing) public returns (uint256) {
-        Claim memory info = warmupInfo[_to];
+    function forfeit() external {
+        Claim memory info = warmupInfo[ msg.sender ];
+        delete warmupInfo[ msg.sender ];
 
-        if (!info.lock) {
-            require(_to == msg.sender, "External claims for account are locked");
+        IWarmup( warmupContract ).retrieve( address(this), IsOHM( sOKP ).balanceForGons( info.gons ) );
+        IERC20( OKP ).safeTransfer( msg.sender, info.deposit );
+    }
+
+    /**
+        @notice prevent new deposits to address (protection from malicious activity)
+     */
+    function toggleDepositLock() external {
+        warmupInfo[ msg.sender ].lock = !warmupInfo[ msg.sender ].lock;
+    }
+
+    /**
+        @notice redeem sOKP for OKP
+        @param _amount uint
+        @param _trigger bool
+     */
+    function unstake( uint _amount, bool _trigger ) external {
+        if ( _trigger ) {
+            rebase();
         }
+        IERC20( sOKP ).safeTransferFrom( msg.sender, address(this), _amount );
+         VestingPeriod memory periodInfo = vestingPeriodInfo[ msg.sender ];
+         if(block.timestamp >= periodInfo.period) {
+            IERC20( OKP ).safeTransfer( msg.sender, _amount );
+         } else {
+             _deductFee(_amount);
+         }
+    }
 
-        if (epoch.number >= info.expiry && info.expiry != 0) {
-            delete warmupInfo[_to];
+    function _deductFee(uint256 _amount) internal  {
+         require(_amount > 0, "Ammount not valid for fee deduction");
+         VestingPeriod memory periodInfo = vestingPeriodInfo[ msg.sender ];
+         DeductionFee memory fee = deductionFee;
 
-            gonsInWarmup = gonsInWarmup.sub(info.gons);
+         uint256 feeForTeam = _amount.mul(fee.team).div(10000); // 5% 
+         uint256 feeForBurn = _amount.mul(fee.burn).div(10000); // 5% 
 
-            return _send(_to, sOHM.balanceForGons(info.gons), _rebasing);
+        IOHM( OKP ).burnFrom( msg.sender, feeForBurn );
+        IERC20( OKP ).safeTransfer( fee.teamWallet, feeForTeam );
+
+         if(_amount == periodInfo.amount) {
+             delete vestingPeriodInfo[ msg.sender ];
+         } else{
+          vestingPeriodInfo[msg.sender] = VestingPeriod({
+            period: periodInfo.period,
+            user: periodInfo.user,
+            amount: periodInfo.amount.sub(feeForTeam.add(feeForBurn))
+        });
         }
-        return 0;
+    }
+
+
+    /**
+        @notice returns the sOKP index, which tracks rebase growth
+        @return uint
+     */
+    function index() public view returns ( uint ) {
+        return IsOHM( sOKP ).index();
     }
 
     /**
-     * @notice forfeit stake and retrieve OHM
-     * @return uint
+        @notice trigger rebase if epoch over
      */
-    function forfeit() external returns (uint256) {
-        Claim memory info = warmupInfo[msg.sender];
-        delete warmupInfo[msg.sender];
+    function rebase() public {
+        if( epoch.endBlock <= block.number ) {
 
-        gonsInWarmup = gonsInWarmup.sub(info.gons);
+            IsOHM( sOKP ).rebase( epoch.distribute, epoch.number );
 
-        OHM.safeTransfer(msg.sender, info.deposit);
-
-        return info.deposit;
-    }
-
-    /**
-     * @notice prevent new deposits or claims from ext. address (protection from malicious activity)
-     */
-    function toggleLock() external {
-        warmupInfo[msg.sender].lock = !warmupInfo[msg.sender].lock;
-    }
-
-    /**
-     * @notice redeem sOHM for OHMs
-     * @param _to address
-     * @param _amount uint
-     * @param _trigger bool
-     * @param _rebasing bool
-     * @return amount_ uint
-     */
-    function unstake(
-        address _to,
-        uint256 _amount,
-        bool _trigger,
-        bool _rebasing
-    ) external returns (uint256 amount_) {
-        amount_ = _amount;
-        uint256 bounty;
-        if (_trigger) {
-            bounty = rebase();
-        }
-        if (_rebasing) {
-            sOHM.safeTransferFrom(msg.sender, address(this), _amount);
-            amount_ = amount_.add(bounty);
-        } else {
-            gOHM.burn(msg.sender, _amount); // amount was given in gOHM terms
-            amount_ = gOHM.balanceFrom(amount_).add(bounty); // convert amount to OHM terms & add bounty
-        }
-
-        require(amount_ <= OHM.balanceOf(address(this)), "Insufficient OHM balance in contract");
-        OHM.safeTransfer(_to, amount_);
-    }
-
-    /**
-     * @notice convert _amount sOHM into gBalance_ gOHM
-     * @param _to address
-     * @param _amount uint
-     * @return gBalance_ uint
-     */
-    function wrap(address _to, uint256 _amount) external returns (uint256 gBalance_) {
-        sOHM.safeTransferFrom(msg.sender, address(this), _amount);
-        gBalance_ = gOHM.balanceTo(_amount);
-        gOHM.mint(_to, gBalance_);
-    }
-
-    /**
-     * @notice convert _amount gOHM into sBalance_ sOHM
-     * @param _to address
-     * @param _amount uint
-     * @return sBalance_ uint
-     */
-    function unwrap(address _to, uint256 _amount) external returns (uint256 sBalance_) {
-        gOHM.burn(msg.sender, _amount);
-        sBalance_ = gOHM.balanceFrom(_amount);
-        sOHM.safeTransfer(_to, sBalance_);
-    }
-
-    /**
-     * @notice trigger rebase if epoch over
-     * @return uint256
-     */
-    function rebase() public returns (uint256) {
-        uint256 bounty;
-        if (epoch.end <= block.timestamp) {
-            sOHM.rebase(epoch.distribute, epoch.number);
-
-            epoch.end = epoch.end.add(epoch.length);
+            epoch.endBlock = epoch.endBlock.add( epoch.length );
             epoch.number++;
-
-            if (address(distributor) != address(0)) {
-                distributor.distribute();
-                bounty = distributor.retrieveBounty(); // Will mint ohm for this contract if there exists a bounty
+            
+            if ( distributor != address(0) ) {
+                IDistributor( distributor ).distribute();
             }
-            uint256 balance = OHM.balanceOf(address(this));
-            uint256 staked = sOHM.circulatingSupply();
-            if (balance <= staked.add(bounty)) {
+
+            uint balance = contractBalance();
+            uint staked = IsOHM( sOKP ).circulatingSupply();
+
+            if( balance <= staked ) {
                 epoch.distribute = 0;
             } else {
-                epoch.distribute = balance.sub(staked).sub(bounty);
+                epoch.distribute = balance.sub( staked );
             }
         }
-        return bounty;
     }
 
-    /* ========== INTERNAL FUNCTIONS ========== */
+    /**
+        @notice returns contract OKP holdings, including bonuses provided
+        @return uint
+     */
+    function contractBalance() public view returns ( uint ) {
+        return IERC20( OKP ).balanceOf( address(this) ).add( totalBonus );
+    }
 
     /**
-     * @notice send staker their amount as sOHM or gOHM
-     * @param _to address
-     * @param _amount uint
-     * @param _rebasing bool
+        @notice provide bonus to locked staking contract
+        @param _amount uint
      */
-    function _send(
-        address _to,
-        uint256 _amount,
-        bool _rebasing
-    ) internal returns (uint256) {
-        if (_rebasing) {
-            sOHM.safeTransfer(_to, _amount); // send as sOHM (equal unit as OHM)
-            return _amount;
-        } else {
-            gOHM.mint(_to, gOHM.balanceTo(_amount)); // send as gOHM (convert units from OHM)
-            return gOHM.balanceTo(_amount);
+    function giveLockBonus( uint _amount ) external {
+        require( msg.sender == locker );
+        totalBonus = totalBonus.add( _amount );
+        IERC20( sOKP ).safeTransfer( locker, _amount );
+    }
+
+    /**
+        @notice reclaim bonus from locked staking contract
+        @param _amount uint
+     */
+    function returnLockBonus( uint _amount ) external {
+        require( msg.sender == locker );
+        totalBonus = totalBonus.sub( _amount );
+        IERC20( sOKP ).safeTransferFrom( locker, address(this), _amount );
+    }
+
+    enum CONTRACTS { DISTRIBUTOR, WARMUP, LOCKER }
+
+    /**
+        @notice sets the contract address for LP staking
+        @param _contract address
+     */
+    function setContract( CONTRACTS _contract, address _address ) external onlyGovernor() {
+        if( _contract == CONTRACTS.DISTRIBUTOR ) { // 0
+            distributor = _address;
+        } else if ( _contract == CONTRACTS.WARMUP ) { // 1
+            require( warmupContract == address( 0 ), "Warmup cannot be set more than once" );
+            warmupContract = _address;
+        } else if ( _contract == CONTRACTS.LOCKER ) { // 2
+            require( locker == address(0), "Locker cannot be set more than once" );
+            locker = _address;
         }
     }
-
-    /* ========== VIEW FUNCTIONS ========== */
-
-    /**
-     * @notice returns the sOHM index, which tracks rebase growth
-     * @return uint
-     */
-    function index() public view returns (uint256) {
-        return sOHM.index();
-    }
-
-    /**
-     * @notice total supply in warmup
-     */
-    function supplyInWarmup() public view returns (uint256) {
-        return sOHM.balanceForGons(gonsInWarmup);
-    }
-
-    /**
-     * @notice seconds until the next epoch begins
-     */
-    function secondsToNextEpoch() external view returns (uint256) {
-        return epoch.end.sub(block.timestamp);
-    }
-
-    /* ========== MANAGERIAL FUNCTIONS ========== */
-
-    /**
-     * @notice sets the contract address for LP staking
-     * @param _distributor address
-     */
-    function setDistributor(address _distributor) external onlyGovernor {
-        distributor = IDistributor(_distributor);
-        emit DistributorSet(_distributor);
-    }
-
+    
     /**
      * @notice set warmup period for new stakers
      * @param _warmupPeriod uint
      */
-    function setWarmupLength(uint256 _warmupPeriod) external onlyGovernor {
+    function setWarmup( uint _warmupPeriod ) external onlyGovernor() {
         warmupPeriod = _warmupPeriod;
-        emit WarmupSet(_warmupPeriod);
+    }
+
+    function setDeductionFeeAndAddress (uint _burn, uint _team, address teamWallet) external onlyGovernor() {
+        deductionFee = DeductionFee({
+            burn: _burn,
+            team: _team,
+            teamWallet: teamWallet
+        });
     }
 }

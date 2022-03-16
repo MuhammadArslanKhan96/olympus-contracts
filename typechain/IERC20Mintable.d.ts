@@ -19,25 +19,22 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface IStakingInterface extends ethers.utils.Interface {
+interface IERC20MintableInterface extends ethers.utils.Interface {
   functions: {
-    "claim(address)": FunctionFragment;
-    "stake(uint256,address)": FunctionFragment;
+    "mint(address,uint256)": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "claim", values: [string]): string;
   encodeFunctionData(
-    functionFragment: "stake",
-    values: [BigNumberish, string]
+    functionFragment: "mint",
+    values: [string, BigNumberish]
   ): string;
 
-  decodeFunctionResult(functionFragment: "claim", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "stake", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "mint", data: BytesLike): Result;
 
   events: {};
 }
 
-export class IStaking extends BaseContract {
+export class IERC20Mintable extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -78,66 +75,69 @@ export class IStaking extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: IStakingInterface;
+  interface: IERC20MintableInterface;
 
   functions: {
-    claim(
-      _recipient: string,
+    "mint(address,uint256)"(
+      account_: string,
+      ammount_: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
+    "mint(uint256)"(
+      amount_: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
 
-  claim(
-    _recipient: string,
+  "mint(address,uint256)"(
+    account_: string,
+    ammount_: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  stake(
-    _amount: BigNumberish,
-    _recipient: string,
+  "mint(uint256)"(
+    amount_: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    claim(_recipient: string, overrides?: CallOverrides): Promise<void>;
-
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
+    "mint(address,uint256)"(
+      account_: string,
+      ammount_: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<void>;
+
+    "mint(uint256)"(
+      amount_: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
   };
 
   filters: {};
 
   estimateGas: {
-    claim(
-      _recipient: string,
+    "mint(address,uint256)"(
+      account_: string,
+      ammount_: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
+    "mint(uint256)"(
+      amount_: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    claim(
-      _recipient: string,
+    "mint(address,uint256)"(
+      account_: string,
+      ammount_: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    stake(
-      _amount: BigNumberish,
-      _recipient: string,
+    "mint(uint256)"(
+      amount_: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

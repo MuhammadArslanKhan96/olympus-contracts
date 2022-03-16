@@ -9,7 +9,7 @@ import type { IOwnable, IOwnableInterface } from "../IOwnable";
 const _abi = [
   {
     inputs: [],
-    name: "owner",
+    name: "manager",
     outputs: [
       {
         internalType: "address",

@@ -21,21 +21,26 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface DistributorInterface extends ethers.utils.Interface {
   functions: {
+    "OKP()": FunctionFragment;
     "addRecipient(address,uint256)": FunctionFragment;
     "adjustments(uint256)": FunctionFragment;
-    "authority()": FunctionFragment;
-    "bounty()": FunctionFragment;
     "distribute()": FunctionFragment;
+    "epochLength()": FunctionFragment;
     "info(uint256)": FunctionFragment;
+    "nextEpochBlock()": FunctionFragment;
     "nextRewardAt(uint256)": FunctionFragment;
     "nextRewardFor(address)": FunctionFragment;
-    "removeRecipient(uint256)": FunctionFragment;
-    "retrieveBounty()": FunctionFragment;
+    "policy()": FunctionFragment;
+    "pullPolicy()": FunctionFragment;
+    "pushPolicy(address)": FunctionFragment;
+    "removeRecipient(uint256,address)": FunctionFragment;
+    "renouncePolicy()": FunctionFragment;
     "setAdjustment(uint256,bool,uint256,uint256)": FunctionFragment;
-    "setAuthority(address)": FunctionFragment;
-    "setBounty(uint256)": FunctionFragment;
+    "setEpochData(uint256,uint256)": FunctionFragment;
+    "treasury()": FunctionFragment;
   };
 
+  encodeFunctionData(functionFragment: "OKP", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "addRecipient",
     values: [string, BigNumberish]
@@ -44,13 +49,19 @@ interface DistributorInterface extends ethers.utils.Interface {
     functionFragment: "adjustments",
     values: [BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: "authority", values?: undefined): string;
-  encodeFunctionData(functionFragment: "bounty", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "distribute",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "epochLength",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "info", values: [BigNumberish]): string;
+  encodeFunctionData(
+    functionFragment: "nextEpochBlock",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "nextRewardAt",
     values: [BigNumberish]
@@ -59,12 +70,18 @@ interface DistributorInterface extends ethers.utils.Interface {
     functionFragment: "nextRewardFor",
     values: [string]
   ): string;
+  encodeFunctionData(functionFragment: "policy", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "pullPolicy",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "pushPolicy", values: [string]): string;
   encodeFunctionData(
     functionFragment: "removeRecipient",
-    values: [BigNumberish]
+    values: [BigNumberish, string]
   ): string;
   encodeFunctionData(
-    functionFragment: "retrieveBounty",
+    functionFragment: "renouncePolicy",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -72,14 +89,12 @@ interface DistributorInterface extends ethers.utils.Interface {
     values: [BigNumberish, boolean, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "setAuthority",
-    values: [string]
+    functionFragment: "setEpochData",
+    values: [BigNumberish, BigNumberish]
   ): string;
-  encodeFunctionData(
-    functionFragment: "setBounty",
-    values: [BigNumberish]
-  ): string;
+  encodeFunctionData(functionFragment: "treasury", values?: undefined): string;
 
+  decodeFunctionResult(functionFragment: "OKP", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "addRecipient",
     data: BytesLike
@@ -88,10 +103,16 @@ interface DistributorInterface extends ethers.utils.Interface {
     functionFragment: "adjustments",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "authority", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "bounty", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "distribute", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "epochLength",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "info", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "nextEpochBlock",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "nextRewardAt",
     data: BytesLike
@@ -100,12 +121,15 @@ interface DistributorInterface extends ethers.utils.Interface {
     functionFragment: "nextRewardFor",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "policy", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "pullPolicy", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "pushPolicy", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "removeRecipient",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "retrieveBounty",
+    functionFragment: "renouncePolicy",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -113,20 +137,20 @@ interface DistributorInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setAuthority",
+    functionFragment: "setEpochData",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "setBounty", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "treasury", data: BytesLike): Result;
 
   events: {
-    "AuthorityUpdated(address)": EventFragment;
+    "OwnershipTransferred(address,address)": EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "AuthorityUpdated"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
 }
 
-export type AuthorityUpdatedEvent = TypedEvent<
-  [string] & { authority: string }
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string] & { previousOwner: string; newOwner: string }
 >;
 
 export class Distributor extends BaseContract {
@@ -173,6 +197,8 @@ export class Distributor extends BaseContract {
   interface: DistributorInterface;
 
   functions: {
+    OKP(overrides?: CallOverrides): Promise<[string]>;
+
     addRecipient(
       _recipient: string,
       _rewardRate: BigNumberish,
@@ -190,18 +216,18 @@ export class Distributor extends BaseContract {
       }
     >;
 
-    authority(overrides?: CallOverrides): Promise<[string]>;
-
-    bounty(overrides?: CallOverrides): Promise<[BigNumber]>;
-
     distribute(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
+
+    epochLength(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     info(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber, string] & { rate: BigNumber; recipient: string }>;
+
+    nextEpochBlock(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     nextRewardAt(
       _rate: BigNumberish,
@@ -213,12 +239,24 @@ export class Distributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
-    removeRecipient(
-      _index: BigNumberish,
+    policy(overrides?: CallOverrides): Promise<[string]>;
+
+    pullPolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    retrieveBounty(
+    pushPolicy(
+      newPolicy_: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    removeRecipient(
+      _index: BigNumberish,
+      _recipient: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    renouncePolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -230,16 +268,16 @@ export class Distributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    setAuthority(
-      _newAuthority: string,
+    setEpochData(
+      _epochLength: BigNumberish,
+      _nextEpochBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    setBounty(
-      _bounty: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
+    treasury(overrides?: CallOverrides): Promise<[string]>;
   };
+
+  OKP(overrides?: CallOverrides): Promise<string>;
 
   addRecipient(
     _recipient: string,
@@ -258,18 +296,18 @@ export class Distributor extends BaseContract {
     }
   >;
 
-  authority(overrides?: CallOverrides): Promise<string>;
-
-  bounty(overrides?: CallOverrides): Promise<BigNumber>;
-
   distribute(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
+
+  epochLength(overrides?: CallOverrides): Promise<BigNumber>;
 
   info(
     arg0: BigNumberish,
     overrides?: CallOverrides
   ): Promise<[BigNumber, string] & { rate: BigNumber; recipient: string }>;
+
+  nextEpochBlock(overrides?: CallOverrides): Promise<BigNumber>;
 
   nextRewardAt(
     _rate: BigNumberish,
@@ -281,12 +319,24 @@ export class Distributor extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  removeRecipient(
-    _index: BigNumberish,
+  policy(overrides?: CallOverrides): Promise<string>;
+
+  pullPolicy(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  retrieveBounty(
+  pushPolicy(
+    newPolicy_: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  removeRecipient(
+    _index: BigNumberish,
+    _recipient: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  renouncePolicy(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -298,17 +348,17 @@ export class Distributor extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  setAuthority(
-    _newAuthority: string,
+  setEpochData(
+    _epochLength: BigNumberish,
+    _nextEpochBlock: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  setBounty(
-    _bounty: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
+  treasury(overrides?: CallOverrides): Promise<string>;
 
   callStatic: {
+    OKP(overrides?: CallOverrides): Promise<string>;
+
     addRecipient(
       _recipient: string,
       _rewardRate: BigNumberish,
@@ -326,17 +376,17 @@ export class Distributor extends BaseContract {
       }
     >;
 
-    authority(overrides?: CallOverrides): Promise<string>;
+    distribute(overrides?: CallOverrides): Promise<boolean>;
 
-    bounty(overrides?: CallOverrides): Promise<BigNumber>;
-
-    distribute(overrides?: CallOverrides): Promise<void>;
+    epochLength(overrides?: CallOverrides): Promise<BigNumber>;
 
     info(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber, string] & { rate: BigNumber; recipient: string }>;
 
+    nextEpochBlock(overrides?: CallOverrides): Promise<BigNumber>;
+
     nextRewardAt(
       _rate: BigNumberish,
       overrides?: CallOverrides
@@ -347,12 +397,19 @@ export class Distributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    policy(overrides?: CallOverrides): Promise<string>;
+
+    pullPolicy(overrides?: CallOverrides): Promise<void>;
+
+    pushPolicy(newPolicy_: string, overrides?: CallOverrides): Promise<void>;
+
     removeRecipient(
       _index: BigNumberish,
+      _recipient: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    retrieveBounty(overrides?: CallOverrides): Promise<BigNumber>;
+    renouncePolicy(overrides?: CallOverrides): Promise<void>;
 
     setAdjustment(
       _index: BigNumberish,
@@ -362,25 +419,36 @@ export class Distributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setAuthority(
-      _newAuthority: string,
+    setEpochData(
+      _epochLength: BigNumberish,
+      _nextEpochBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setBounty(_bounty: BigNumberish, overrides?: CallOverrides): Promise<void>;
+    treasury(overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {
-    "AuthorityUpdated(address)"(
-      authority?: string | null
-    ): TypedEventFilter<[string], { authority: string }>;
+    "OwnershipTransferred(address,address)"(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >;
 
-    AuthorityUpdated(
-      authority?: string | null
-    ): TypedEventFilter<[string], { authority: string }>;
+    OwnershipTransferred(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >;
   };
 
   estimateGas: {
+    OKP(overrides?: CallOverrides): Promise<BigNumber>;
+
     addRecipient(
       _recipient: string,
       _rewardRate: BigNumberish,
@@ -392,15 +460,15 @@ export class Distributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    authority(overrides?: CallOverrides): Promise<BigNumber>;
-
-    bounty(overrides?: CallOverrides): Promise<BigNumber>;
-
     distribute(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
+    epochLength(overrides?: CallOverrides): Promise<BigNumber>;
+
     info(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
+
+    nextEpochBlock(overrides?: CallOverrides): Promise<BigNumber>;
 
     nextRewardAt(
       _rate: BigNumberish,
@@ -412,12 +480,24 @@ export class Distributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    removeRecipient(
-      _index: BigNumberish,
+    policy(overrides?: CallOverrides): Promise<BigNumber>;
+
+    pullPolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    retrieveBounty(
+    pushPolicy(
+      newPolicy_: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    removeRecipient(
+      _index: BigNumberish,
+      _recipient: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    renouncePolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -429,18 +509,18 @@ export class Distributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    setAuthority(
-      _newAuthority: string,
+    setEpochData(
+      _epochLength: BigNumberish,
+      _nextEpochBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    setBounty(
-      _bounty: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
+    treasury(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
+    OKP(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     addRecipient(
       _recipient: string,
       _rewardRate: BigNumberish,
@@ -452,19 +532,19 @@ export class Distributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    authority(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    bounty(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
     distribute(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
+
+    epochLength(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     info(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    nextEpochBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     nextRewardAt(
       _rate: BigNumberish,
       overrides?: CallOverrides
@@ -475,12 +555,24 @@ export class Distributor extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    removeRecipient(
-      _index: BigNumberish,
+    policy(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    pullPolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    retrieveBounty(
+    pushPolicy(
+      newPolicy_: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    removeRecipient(
+      _index: BigNumberish,
+      _recipient: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    renouncePolicy(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -492,14 +584,12 @@ export class Distributor extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    setAuthority(
-      _newAuthority: string,
+    setEpochData(
+      _epochLength: BigNumberish,
+      _nextEpochBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    setBounty(
-      _bounty: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
+    treasury(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }

@@ -21,13 +21,13 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface OwnableInterface extends ethers.utils.Interface {
   functions: {
-    "owner()": FunctionFragment;
+    "manager()": FunctionFragment;
     "pullManagement()": FunctionFragment;
     "pushManagement(address)": FunctionFragment;
     "renounceManagement()": FunctionFragment;
   };
 
-  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(functionFragment: "manager", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "pullManagement",
     values?: undefined
@@ -41,7 +41,7 @@ interface OwnableInterface extends ethers.utils.Interface {
     values?: undefined
   ): string;
 
-  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "manager", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "pullManagement",
     data: BytesLike
@@ -116,7 +116,7 @@ export class Ownable extends BaseContract {
   interface: OwnableInterface;
 
   functions: {
-    owner(overrides?: CallOverrides): Promise<[string]>;
+    manager(overrides?: CallOverrides): Promise<[string]>;
 
     pullManagement(
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -132,7 +132,7 @@ export class Ownable extends BaseContract {
     ): Promise<ContractTransaction>;
   };
 
-  owner(overrides?: CallOverrides): Promise<string>;
+  manager(overrides?: CallOverrides): Promise<string>;
 
   pullManagement(
     overrides?: Overrides & { from?: string | Promise<string> }
@@ -148,7 +148,7 @@ export class Ownable extends BaseContract {
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    owner(overrides?: CallOverrides): Promise<string>;
+    manager(overrides?: CallOverrides): Promise<string>;
 
     pullManagement(overrides?: CallOverrides): Promise<void>;
 
@@ -192,7 +192,7 @@ export class Ownable extends BaseContract {
   };
 
   estimateGas: {
-    owner(overrides?: CallOverrides): Promise<BigNumber>;
+    manager(overrides?: CallOverrides): Promise<BigNumber>;
 
     pullManagement(
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -209,7 +209,7 @@ export class Ownable extends BaseContract {
   };
 
   populateTransaction: {
-    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    manager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     pullManagement(
       overrides?: Overrides & { from?: string | Promise<string> }
